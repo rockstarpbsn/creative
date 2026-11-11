@@ -46,8 +46,6 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tabs a{padding:6px 16px;border-radius:999px;text-decoration:none;color:var(--bar-muted);font-weight:500;font-size:.9rem}
 .tabs a:hover{color:var(--bar-ink)}
 .tabs a[aria-current="page"]{background:var(--accent);color:#fff;font-weight:600}
-.auth{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--bar-muted)}
-.auth .btn{background:transparent;color:var(--bar-ink);border:1px solid var(--bar-muted)}
 
 main{padding-block:28px 64px}
 .view{display:grid;gap:24px}
@@ -156,9 +154,6 @@ dd a{color:var(--accent-text)}
       <a href="#request" id="tab-request">Buat request</a>
       <a href="#database" id="tab-database">Database</a>
     </nav>
-    <div class="auth">
-      <button class="btn sm" type="button" id="auth-btn">Mode supervisor</button>
-    </div>
   </div>
 </header>
 
@@ -307,7 +302,7 @@ const firebaseConfig = {
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const STATUS = {not_started:["Not started","none"], in_progress:["On progress","prog"], finished:["Finished","done"]};
-const S = {uid:null, admin:false, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
+const S = {uid:null, admin:true, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
 
 const configured = !firebaseConfig.apiKey.startsWith("ISI_");
 let db;
@@ -354,15 +349,6 @@ const fmtTime = s => s ? new Date(s).toLocaleString("id-ID",{day:"numeric",month
 const daysLeft = s => { if(!s) return null; const [y,m,d]=s.split("-").map(Number); return Math.round((new Date(y,m-1,d)-today())/864e5); };
 const statusOf = id => (S.assign[id] && S.assign[id].status) || "not_started";
 const isLate = r => statusOf(r.id) !== "finished" && (daysLeft(r.deadline) ?? 0) < 0;
-
-/* ---------- mode supervisor (tanpa login) ---------- */
-$("auth-btn").addEventListener("click", () => applyAuth(!S.admin));
-function applyAuth(on){
-  S.admin = on;
-  $("auth-btn").textContent = on ? "Keluar mode supervisor" : "Mode supervisor";
-  $("db-sub").textContent = on ? "Mode supervisor aktif: klik baris untuk menunjuk PIC dan mengubah status." : "Semua request design, PIC, dan progresnya. Klik baris untuk melihat brief lengkap.";
-  render();
-}
 
 /* ---------- draft ---------- */
 const form = $("brief"), DRAFT = "crd-draft";
