@@ -308,6 +308,13 @@ const configured = !firebaseConfig.apiKey.startsWith("ISI_");
 let db;
 if (configured) { db = getFirestore(initializeApp(firebaseConfig)); }
 
+/* URL Google Apps Script (lihat apps-script.gs). Kosongkan kalau tidak mau sinkron ke Google Sheet. */
+const SHEET_URL = "";
+function syncSheet(payload){
+  if (!SHEET_URL) return;
+  try { fetch(SHEET_URL, {method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body:JSON.stringify(payload)}).catch(()=>{}); } catch {}
+}
+
 /* ---------- data layer: Firestore, atau mode lokal (localStorage) kalau Firebase belum diisi ---------- */
 const LKEY = "crd-local-v1";
 const loadLocal = () => { try { return JSON.parse(localStorage.getItem(LKEY)) || {}; } catch { return {}; } };
@@ -369,7 +376,9 @@ form.addEventListener("submit", async e => {
   const id = code();
   $("submit").disabled = true; msg.textContent = "Mengirim…";
   try {
-    await put("requests", id, {...data, code:id, createdAt:new Date().toISOString(), requesterId:S.uid});
+    const rec = {...data, code:id, createdAt:new Date().toISOString(), requesterId:S.uid};
+    await put("requests", id, rec);
+    syncSheet({action:"request", ...rec});
     form.reset(); try { localStorage.removeItem(DRAFT); } catch {}
     $("sent-code").textContent = id; $("sent").hidden = false; form.hidden = true;
     msg.textContent = "Kolom bertanda * wajib diisi.";
@@ -469,7 +478,7 @@ $("s-save").addEventListener("click", async () => {
     finishedAt: status === "finished" ? (prev.finishedAt || now) : null};
   if (status !== "not_started" && !next.pic) { $("s-msg").className="msg err"; $("s-msg").textContent = "Tunjuk PIC dulu sebelum mengubah status."; return; }
   $("s-save").disabled = true; $("s-msg").className="msg"; $("s-msg").textContent = "Menyimpan…";
-  try { await put("assignments", id, next); $("s-msg").textContent = "Tersimpan."; }
+  try { await put("assignments", id, next); syncSheet({action:"assign", code:(S.requests.find(x=>x.id===id)||{}).code||id, ...next}); $("s-msg").textContent = "Tersimpan."; }
   catch (e) { $("s-msg").className="msg err"; $("s-msg").textContent = e.code === "permission-denied" ? "Ditolak: email kamu belum terdaftar sebagai supervisor di firestore.rules." : "Gagal menyimpan. Coba lagi."; }
   finally { $("s-save").disabled = false; }
 });
@@ -477,7 +486,7 @@ $("s-del").addEventListener("click", () => { $("s-confirm").hidden = false; });
 $("s-del-no").addEventListener("click", () => { $("s-confirm").hidden = true; });
 $("s-del-yes").addEventListener("click", async () => {
   const id = S.openId; if (!id) return;
-  try { await del("requests", id); await del("assignments", id); $("dlg").close(); }
+  try { await del("requests", id); await del("assignments", id); syncSheet({action:"delete", code:(S.requests.find(x=>x.id===id)||{}).code||id}); $("dlg").close(); }
   catch { $("s-msg").className="msg err"; $("s-msg").textContent = "Gagal menghapus."; }
 });
 
