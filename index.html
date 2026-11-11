@@ -318,6 +318,26 @@ const configured = !firebaseConfig.apiKey.startsWith("ISI_");
 let db, auth;
 if (configured) { const app = initializeApp(firebaseConfig); db = getFirestore(app); auth = getAuth(app); }
 
+/* ---------- data layer: Firestore, atau mode lokal (localStorage) kalau Firebase belum diisi ---------- */
+const LKEY = "crd-local-v1";
+const loadLocal = () => { try { return JSON.parse(localStorage.getItem(LKEY)) || {}; } catch { return {}; } };
+const saveLocal = d => { try { localStorage.setItem(LKEY, JSON.stringify(d)); } catch {} };
+function pullLocal(){
+  const d = loadLocal();
+  S.requests = Object.entries(d.requests || {}).map(([id,v]) => ({id, ...v})).sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
+  S.assign = d.assignments || {}; S.team = (d.team && d.team.members) || []; S.gotReq = true; render();
+}
+async function put(col, id, data){
+  if (configured) return setDoc(doc(db, col, id), data);
+  const d = loadLocal();
+  if (col === "settings") d.team = data; else (d[col] = d[col] || {})[id] = data;
+  saveLocal(d); pullLocal();
+}
+async function del(col, id){
+  if (configured) return deleteDoc(doc(db, col, id));
+  const d = loadLocal(); if (d[col]) delete d[col][id]; saveLocal(d); pullLocal();
+}
+
 /* ---------- routing ---------- */
 function route(){
   const v = location.hash === "#database" ? "database" : "request";
@@ -342,13 +362,13 @@ const isLate = r => statusOf(r.id) !== "finished" && (daysLeft(r.deadline) ?? 0)
 
 /* ---------- auth (supervisor) ---------- */
 $("auth-btn").addEventListener("click", async () => {
-  if (!configured) return;
+  if (!configured) { applyAuth(S.admin ? null : {uid:"local", email:"Supervisor (mode lokal)", emailVerified:true, local:true}); return; }
   try { S.admin ? await signOut(auth) : await signInWithPopup(auth, new GoogleAuthProvider()); }
   catch (e) { showConn("Login gagal (" + (e.code || "error") + ")."); }
 });
 function applyAuth(user){
   S.uid = user ? user.uid : null;
-  S.admin = !!(user && user.emailVerified && ADMIN_EMAILS.includes(user.email));
+  S.admin = !!(user && user.emailVerified && (user.local || ADMIN_EMAILS.includes(user.email)));
   $("auth-who").hidden = !user;
   $("auth-who").textContent = user ? user.email : "";
   $("auth-btn").textContent = user ? "Logout" : "Login supervisor";
@@ -373,12 +393,11 @@ form.addEventListener("submit", async e => {
   if (missing.length){ msg.className="msg err"; msg.textContent = "Lengkapi dulu: " + missing.map(el => form.querySelector(`label[for="${el.id}"]`).childNodes[0].textContent.trim()).join(", ") + "."; missing[0].focus(); return; }
   if (!/^https:\/\/(drive|docs)\.google\.com\//i.test($("f-brief").value.trim())){ msg.className="msg err"; msg.textContent="Link brief harus link Google Drive (drive.google.com atau docs.google.com)."; $("f-brief").focus(); return; }
   if ($("f-deadline").value < iso(today())){ msg.className="msg err"; msg.textContent="Deadline tidak boleh sebelum hari ini."; $("f-deadline").focus(); return; }
-  if (!configured){ msg.className="msg err"; msg.textContent="Firebase belum dikonfigurasi (lihat firebaseConfig di index.html)."; return; }
-  const data = Object.fromEntries([...new FormData(form)].map(([k,v]) => [k, String(v).trim()]));
+    const data = Object.fromEntries([...new FormData(form)].map(([k,v]) => [k, String(v).trim()]));
   const id = code();
   $("submit").disabled = true; msg.textContent = "Mengirim…";
   try {
-    await setDoc(doc(db,"requests",id), {...data, code:id, createdAt:new Date().toISOString(), requesterId:S.uid});
+    await put("requests", id, {...data, code:id, createdAt:new Date().toISOString(), requesterId:S.uid});
     form.reset(); try { localStorage.removeItem(DRAFT); } catch {}
     $("sent-code").textContent = id; $("sent").hidden = false; form.hidden = true;
     msg.textContent = "Kolom bertanda * wajib diisi.";
@@ -429,8 +448,7 @@ function render(){
   }).join("");
 
   $("empty").hidden = list.length > 0;
-  if (!configured) { $("empty-h").textContent = "Firebase belum dikonfigurasi"; $("empty-p").textContent = "Isi firebaseConfig di index.html."; }
-  else if (!rs.length && !S.gotReq) { $("empty-h").textContent = "Memuat request…"; $("empty-p").textContent = ""; }
+  if (!rs.length && !S.gotReq) { $("empty-h").textContent = "Memuat request…"; $("empty-p").textContent = ""; }
   else if (!rs.length) { $("empty-h").textContent = "Belum ada request"; $("empty-p").textContent = 'Request yang dikirim dari tab "Buat request" akan muncul di sini.'; }
   else { $("empty-h").textContent = "Tidak ada yang cocok"; $("empty-p").textContent = "Ubah filter atau kata kunci pencarian."; }
 
@@ -479,7 +497,7 @@ $("s-save").addEventListener("click", async () => {
     finishedAt: status === "finished" ? (prev.finishedAt || now) : null};
   if (status !== "not_started" && !next.pic) { $("s-msg").className="msg err"; $("s-msg").textContent = "Tunjuk PIC dulu sebelum mengubah status."; return; }
   $("s-save").disabled = true; $("s-msg").className="msg"; $("s-msg").textContent = "Menyimpan…";
-  try { await setDoc(doc(db,"assignments",id), next); $("s-msg").textContent = "Tersimpan."; }
+  try { await put("assignments", id, next); $("s-msg").textContent = "Tersimpan."; }
   catch (e) { $("s-msg").className="msg err"; $("s-msg").textContent = e.code === "permission-denied" ? "Ditolak: email kamu belum terdaftar sebagai supervisor di firestore.rules." : "Gagal menyimpan. Coba lagi."; }
   finally { $("s-save").disabled = false; }
 });
@@ -487,12 +505,12 @@ $("s-del").addEventListener("click", () => { $("s-confirm").hidden = false; });
 $("s-del-no").addEventListener("click", () => { $("s-confirm").hidden = true; });
 $("s-del-yes").addEventListener("click", async () => {
   const id = S.openId; if (!id) return;
-  try { await deleteDoc(doc(db,"requests",id)); await deleteDoc(doc(db,"assignments",id)); $("dlg").close(); }
+  try { await del("requests", id); await del("assignments", id); $("dlg").close(); }
   catch { $("s-msg").className="msg err"; $("s-msg").textContent = "Gagal menghapus."; }
 });
 
 /* ---------- team ---------- */
-async function saveTeam(list){ try { await setDoc(doc(db,"settings","team"), {members:list}); } catch { $("team-name").placeholder = "Gagal menyimpan daftar tim."; } }
+async function saveTeam(list){ try { await put("settings", "team", {members:list}); } catch { $("team-name").placeholder = "Gagal menyimpan daftar tim."; } }
 $("team-form").addEventListener("submit", e => { e.preventDefault(); const v = $("team-name").value.trim(); if (!v || S.team.includes(v)) return; $("team-name").value = ""; saveTeam([...S.team, v]); });
 $("team-list").addEventListener("click", e => { const b = e.target.closest("[data-rm]"); if (b) saveTeam(S.team.filter((_,i) => i !== +b.dataset.rm)); });
 
@@ -500,8 +518,8 @@ $("team-list").addEventListener("click", e => { const b = e.target.closest("[dat
 function showConn(t){ $("conn").textContent = t; $("conn").hidden = !t; }
 render();
 if (!configured) {
-  showConn("Firebase belum dikonfigurasi. Isi firebaseConfig dan ADMIN_EMAILS di bagian atas script index.html.");
-  $("auth-btn").disabled = true;
+  showConn("Mode lokal: data hanya tersimpan di browser ini dan tidak dibagikan ke orang lain. Isi firebaseConfig di index.html untuk mengaktifkan database bersama.");
+  pullLocal(); addEventListener("storage", pullLocal);
 } else {
   const fail = e => showConn("Koneksi ke database gagal (" + e.code + "). Cek firestore.rules dan konfigurasi.");
   onAuthStateChanged(auth, applyAuth);
