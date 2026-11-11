@@ -80,7 +80,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;
 .notice.ok{border-color:var(--st-done);background:var(--st-done-bg)}
 .notice.warn{border-color:var(--st-prog);background:var(--st-prog-bg)}
 
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .stat{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:14px 16px;cursor:pointer;display:grid;gap:2px}
 .stat b{font-family:var(--f-display);font-size:1.8rem;font-variant-numeric:tabular-nums;line-height:1.1}
 .stat span{font-size:.82rem;color:var(--muted);font-weight:500}
@@ -91,7 +91,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;
 .tools select{width:auto}
 
 .tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
-table{width:100%;border-collapse:collapse;min-width:860px}
+table{width:100%;border-collapse:collapse;min-width:1100px}
 th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--sunken)}
 tbody tr{cursor:pointer}
@@ -105,8 +105,10 @@ td .s{color:var(--muted);font-size:.84rem}
 .chip.none{color:var(--st-none);background:var(--st-none-bg)}
 .chip.prog{color:var(--st-prog);background:var(--st-prog-bg)}
 .chip.done{color:var(--st-done);background:var(--st-done-bg)}
+.chip.hold{color:var(--danger);background:var(--danger-bg)}
+.stat.s-hold b{color:var(--danger)}
 .prio{font-size:.76rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-.prio.Urgent{color:var(--danger)} .prio.Slow{color:var(--muted)}
+.prio.High{color:var(--danger)} .prio.Low{color:var(--muted)}
 .late{color:var(--danger);font-weight:600}
 .unassigned{color:var(--muted);font-style:italic}
 .empty{padding:40px 20px;text-align:center;color:var(--muted);display:grid;gap:8px;justify-items:center}
@@ -141,6 +143,7 @@ dd a{color:var(--accent-text)}
 .seg label:has(input:checked).none{border-color:var(--st-none);background:var(--st-none-bg);color:var(--st-none)}
 .seg label:has(input:checked).prog{border-color:var(--st-prog);background:var(--st-prog-bg);color:var(--st-prog)}
 .seg label:has(input:checked).done{border-color:var(--st-done);background:var(--st-done-bg);color:var(--st-done)}
+.seg label:has(input:checked).hold{border-color:var(--danger);background:var(--danger-bg);color:var(--danger)}
 .seg label:has(input:focus-visible){outline:2px solid var(--accent)}
 .confirm{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border-radius:8px;background:var(--danger-bg);color:var(--danger);font-size:.9rem}
 @media (max-width:560px){dl{grid-template-columns:1fr;gap:2px}dd{margin-bottom:10px}.dlg{padding:18px}.brand span{display:none}}
@@ -167,7 +170,7 @@ dd a{color:var(--accent-text)}
     </div>
     <div class="notice ok" id="sent" hidden>
       <strong>Request terkirim.</strong>
-      <span>Kode request kamu <span class="mono" id="sent-code"></span>. Status awal: Not started, menunggu supervisor menunjuk PIC.</span>
+      <span>Kode request kamu <span class="mono" id="sent-code"></span>. Status awal: Not Started, menunggu supervisor menunjuk designer.</span>
       <div class="actions" style="margin-top:8px"><a class="btn sm" href="#database" style="text-decoration:none">Lihat di Database</a><button class="btn ghost sm" type="button" id="new-again">Buat request lain</button></div>
     </div>
 
@@ -176,43 +179,40 @@ dd a{color:var(--accent-text)}
         <legend>Requester</legend>
         <div class="grid">
           <div class="field"><label for="f-requester">Nama requester <span class="req">*</span></label><input type="text" id="f-requester" name="requester" required autocomplete="name"></div>
-          <div class="field"><label for="f-division">Divisi / brand <span class="req">*</span></label><input type="text" id="f-division" name="division" required placeholder="mis. Brand Marketing, Trade Marketing"></div>
+          <div class="field"><label for="f-brand">Brand <span class="req">*</span></label>
+            <select id="f-brand" name="brand" required>
+              <option value="">Pilih brand</option>
+              <option>RS</option><option>RSM</option><option>RSK</option><option>RSP</option><option>PBSN</option><option>NTD</option>
+            </select></div>
         </div>
       </fieldset>
       <fieldset>
-        <legend>Project</legend>
-        <div class="field"><label for="f-title">Judul project <span class="req">*</span></label><input type="text" id="f-title" name="title" required placeholder="mis. Key visual promo Ramadan 2027"></div>
-        <div class="grid">
-          <div class="field"><label for="f-type">Jenis design <span class="req">*</span></label>
-            <select id="f-type" name="type" required>
-              <option value="">Pilih jenis design</option>
-              <option>Social media post</option><option>Social media story / reels cover</option>
-              <option>Key visual / campaign</option><option>Packaging / label</option>
-              <option>POSM (poster, wobbler, shelf talker)</option><option>Banner / X-banner / backdrop</option>
-              <option>E-commerce asset (banner toko, thumbnail)</option><option>Presentation deck</option>
-              <option>Video / motion</option><option>Merchandise</option><option>Lainnya</option>
-            </select></div>
-          <div class="field"><label for="f-channel">Channel / platform</label><input type="text" id="f-channel" name="channel" placeholder="mis. Instagram, Shopee, toko offline"></div>
-        </div>
-        <div class="field"><label for="f-output">Output: ukuran, format, jumlah <span class="req">*</span></label><input type="text" id="f-output" name="output" required placeholder="mis. 3 feed 1080×1350 px PNG + 1 story 1080×1920 px"></div>
+        <legend>Task</legend>
+        <div class="field"><label for="f-title">Task name <span class="req">*</span></label><input type="text" id="f-title" name="title" required placeholder="mis. Key visual promo Ramadan (tanpa [BRAND], otomatis ditambahkan)"></div>
+        <div class="field"><label for="f-type">Design category <span class="req">*</span></label>
+          <select id="f-type" name="type" required>
+            <option value="">Pilih kategori</option>
+            <option>Digital Media</option><option>Event Toolbox</option><option>Office</option><option>Product</option>
+            <option>POSM</option><option>Deck</option><option>POC</option><option>GSM</option><option>DST Toolbox</option><option>TVC</option>
+          </select></div>
       </fieldset>
       <fieldset>
         <legend>Brief</legend>
-        <p class="legend-note">Tulis brief (mandatory elements, referensi, aset) di Google Docs/Drive, lalu tempel link-nya di sini.</p>
+        <p class="legend-note">Tulis brief (mandatory elements, referensi, aset) di Google Docs/Drive, lalu tempel link-nya di sini. Link ini masuk ke kolom Asset Link di tracker.</p>
         <div class="field"><label for="f-brief">Link brief Google Drive <span class="req">*</span></label><input type="url" id="f-brief" name="briefLink" required placeholder="https://drive.google.com/…" inputmode="url"><small>Pastikan akses link sudah dibuka untuk Tim Creative (Anyone with the link atau email tim).</small></div>
       </fieldset>
       <fieldset>
         <legend>Timeline</legend>
         <div class="grid">
           <div class="field"><label for="f-deadline">Deadline <span class="req">*</span></label><input type="date" id="f-deadline" name="deadline" required><small>Tanggal design final dibutuhkan.</small></div>
-          <div class="field"><span style="font-weight:600;font-size:.88rem">Prioritas</span>
-            <div class="pills" role="radiogroup" aria-label="Prioritas">
-              <label><input type="radio" name="priority" value="Slow">Slow</label>
-              <label><input type="radio" name="priority" value="Normal" checked>Normal</label>
-              <label><input type="radio" name="priority" value="Urgent">Urgent</label>
+          <div class="field"><span style="font-weight:600;font-size:.88rem">Priority</span>
+            <div class="pills" role="radiogroup" aria-label="Priority">
+              <label><input type="radio" name="priority" value="Low">Low</label>
+              <label><input type="radio" name="priority" value="Medium" checked>Medium</label>
+              <label><input type="radio" name="priority" value="High">High</label>
             </div></div>
         </div>
-        <div class="field"><label for="f-notes">Catatan tambahan</label><textarea id="f-notes" name="notes"></textarea></div>
+        <div class="field"><label for="f-notes">Spesifikasi &amp; catatan</label><textarea id="f-notes" name="notes" placeholder="mis. ukuran, format, jumlah output, channel"></textarea></div>
       </fieldset>
       <div class="actions">
         <button class="btn" type="submit" id="submit">Kirim request</button>
@@ -228,25 +228,26 @@ dd a{color:var(--accent-text)}
     </div>
     <div class="stats">
       <button class="stat" type="button" data-f="all" aria-pressed="true"><b id="c-all">0</b><span>Semua request</span></button>
-      <button class="stat s-none" type="button" data-f="not_started" aria-pressed="false"><b id="c-none">0</b><span>Not started</span></button>
-      <button class="stat s-prog" type="button" data-f="in_progress" aria-pressed="false"><b id="c-prog">0</b><span>On progress</span></button>
-      <button class="stat s-done" type="button" data-f="finished" aria-pressed="false"><b id="c-done">0</b><span>Finished</span></button>
+      <button class="stat s-none" type="button" data-f="not_started" aria-pressed="false"><b id="c-none">0</b><span>Not Started</span></button>
+      <button class="stat s-prog" type="button" data-f="in_progress" aria-pressed="false"><b id="c-prog">0</b><span>In Progress</span></button>
+      <button class="stat s-hold" type="button" data-f="on_hold" aria-pressed="false"><b id="c-hold">0</b><span>On Hold</span></button>
+      <button class="stat s-done" type="button" data-f="finished" aria-pressed="false"><b id="c-done">0</b><span>Completed</span></button>
       <button class="stat s-late" type="button" data-f="overdue" aria-pressed="false"><b id="c-late">0</b><span>Lewat deadline</span></button>
     </div>
     <div class="tools">
-      <input type="text" id="q" placeholder="Cari judul, kode, requester, PIC…" aria-label="Cari">
-      <select id="pic-filter" aria-label="Filter PIC"><option value="">Semua PIC</option></select>
+      <input type="text" id="q" placeholder="Cari task, kode, brand, requester, designer…" aria-label="Cari">
+      <select id="pic-filter" aria-label="Filter designer"><option value="">Semua designer</option></select>
       <select id="sort" aria-label="Urutkan"><option value="new">Terbaru dulu</option><option value="deadline">Deadline terdekat</option></select>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Kode</th><th>Project</th><th>Requester</th><th>Deadline</th><th>Prioritas</th><th>PIC</th><th>Status</th></tr></thead>
+        <thead><tr><th>Kode</th><th>Task name</th><th>Category</th><th>Brand</th><th>Deadline</th><th>Priority</th><th>Work status</th><th>Approval</th><th>Production</th><th>Designer</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="empty" id="empty"><h3 id="empty-h">Belum ada request</h3><p id="empty-p"></p></div>
     </div>
     <div class="team" id="team" hidden>
-      <h3>Anggota Tim Creative (daftar PIC)</h3>
+      <h3>Designer Tim Creative (daftar pilihan Designer)</h3>
       <div class="team-list" id="team-list"></div>
       <form id="team-form">
         <input type="text" id="team-name" placeholder="Nama anggota tim" aria-label="Nama anggota tim">
@@ -265,14 +266,25 @@ dd a{color:var(--accent-text)}
     <dl id="d-list"></dl>
     <div class="sup" id="d-sup" hidden>
       <h3>Panel supervisor</h3>
-      <div class="field"><label for="s-pic">PIC</label><select id="s-pic"></select></div>
-      <div class="field"><span style="font-weight:600;font-size:.88rem">Status</span>
-        <div class="seg" role="radiogroup" aria-label="Status">
-          <label class="none"><input type="radio" name="s-status" value="not_started">Not started</label>
-          <label class="prog"><input type="radio" name="s-status" value="in_progress">On progress</label>
-          <label class="done"><input type="radio" name="s-status" value="finished">Finished</label>
+      <div class="field"><label for="s-pic">Designer</label><select id="s-pic"></select></div>
+      <div class="field"><span style="font-weight:600;font-size:.88rem">Work status</span>
+        <div class="seg" role="radiogroup" aria-label="Work status">
+          <label class="none"><input type="radio" name="s-status" value="not_started">Not Started</label>
+          <label class="prog"><input type="radio" name="s-status" value="in_progress">In Progress</label>
+          <label class="hold"><input type="radio" name="s-status" value="on_hold">On Hold</label>
+          <label class="done"><input type="radio" name="s-status" value="finished">Completed</label>
         </div></div>
-      <div class="field"><label for="s-note">Catatan untuk requester</label><textarea id="s-note" placeholder="mis. link hasil final, estimasi selesai, kebutuhan info tambahan"></textarea></div>
+      <div class="grid">
+        <div class="field"><label for="s-approval">Approval status</label>
+          <select id="s-approval"><option value="">—</option><option>Under Review</option><option>Approved by Manager</option><option>Needs Revision</option></select></div>
+        <div class="field"><label for="s-prod">Production status</label>
+          <select id="s-prod"><option>Pending</option><option>Need Techdraw</option><option>Done</option></select></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label for="s-asset">Asset link</label><input type="text" id="s-asset" placeholder="link / nama file hasil desain (kosong = tetap link brief)"></div>
+        <div class="field"><label for="s-tech">Technical draw link</label><input type="text" id="s-tech" placeholder="link / nama file techdraw"></div>
+      </div>
+      <div class="field"><label for="s-note">Catatan untuk requester</label><textarea id="s-note" placeholder="mis. estimasi selesai, kebutuhan info tambahan"></textarea></div>
       <div class="actions">
         <button class="btn" type="button" id="s-save">Simpan update</button>
         <button class="btn danger sm" type="button" id="s-del">Hapus request</button>
@@ -301,7 +313,9 @@ const firebaseConfig = {
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const STATUS = {not_started:["Not started","none"], in_progress:["On progress","prog"], finished:["Finished","done"]};
+const STATUS = {not_started:["Not Started","none"], in_progress:["In Progress","prog"], on_hold:["On Hold","hold"], finished:["Completed","done"]};
+const PRIO = v => ({Urgent:"High", Normal:"Medium", Slow:"Low"}[v] || (["High","Medium","Low"].includes(v) ? v : "Medium"));
+const brandOf = r => r.brand || r.division || "";
 const S = {uid:null, admin:true, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
 
 const configured = !firebaseConfig.apiKey.startsWith("ISI_");
@@ -358,7 +372,7 @@ const statusOf = id => (S.assign[id] && S.assign[id].status) || "not_started";
 const isLate = r => statusOf(r.id) !== "finished" && (daysLeft(r.deadline) ?? 0) < 0;
 
 /* ---------- draft ---------- */
-const form = $("brief"), DRAFT = "crd-draft";
+const form = $("brief"), DRAFT = "crd-draft-v2";
 try { const d = JSON.parse(localStorage.getItem(DRAFT) || "null"); if (d) for (const [k,v] of Object.entries(d)) { const el = form.elements[k]; if (el) el.value = v; } } catch {}
 let draftT; form.addEventListener("input", () => { clearTimeout(draftT); draftT = setTimeout(() => { try { localStorage.setItem(DRAFT, JSON.stringify(Object.fromEntries(new FormData(form)))); } catch {} }, 400); });
 
@@ -393,14 +407,14 @@ $("new-again").addEventListener("click", () => { $("sent").hidden = true; form.h
 /* ---------- render ---------- */
 function render(){
   const rs = S.requests;
-  const n = {all:rs.length, not_started:0, in_progress:0, finished:0, overdue:0};
+  const n = {all:rs.length, not_started:0, in_progress:0, on_hold:0, finished:0, overdue:0};
   rs.forEach(r => { n[statusOf(r.id)]++; if (isLate(r)) n.overdue++; });
-  $("c-all").textContent=n.all; $("c-none").textContent=n.not_started; $("c-prog").textContent=n.in_progress; $("c-done").textContent=n.finished; $("c-late").textContent=n.overdue;
+  $("c-all").textContent=n.all; $("c-none").textContent=n.not_started; $("c-prog").textContent=n.in_progress; $("c-hold").textContent=n.on_hold; $("c-done").textContent=n.finished; $("c-late").textContent=n.overdue;
   document.querySelectorAll(".stat").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === S.filter)));
 
   const pics = [...new Set([...S.team, ...Object.values(S.assign).map(a => a.pic).filter(Boolean)])].sort();
   const pf = $("pic-filter"), cur = pf.value;
-  pf.innerHTML = '<option value="">Semua PIC</option><option value="__none">Belum ada PIC</option>' + pics.map(p => `<option>${esc(p)}</option>`).join("");
+  pf.innerHTML = '<option value="">Semua designer</option><option value="__none">Belum ada designer</option>' + pics.map(p => `<option>${esc(p)}</option>`).join("");
   pf.value = [...pf.options].some(o => o.value === cur) ? cur : "";
 
   const q = $("q").value.trim().toLowerCase(), pic = pf.value;
@@ -408,7 +422,7 @@ function render(){
     const a = S.assign[r.id] || {};
     if (S.filter === "overdue" ? !isLate(r) : (S.filter !== "all" && statusOf(r.id) !== S.filter)) return false;
     if (pic === "__none" ? a.pic : (pic && a.pic !== pic)) return false;
-    if (q && ![r.code,r.title,r.requester,r.division,r.type,a.pic].join(" ").toLowerCase().includes(q)) return false;
+    if (q && ![r.code,r.title,r.requester,brandOf(r),r.type,a.pic,a.approval,a.production].join(" ").toLowerCase().includes(q)) return false;
     return true;
   });
   if ($("sort").value === "deadline") list = list.slice().sort((a,b) => (a.deadline||"9").localeCompare(b.deadline||"9"));
@@ -417,15 +431,18 @@ function render(){
     const a = S.assign[r.id] || {}, st = STATUS[statusOf(r.id)], dl = daysLeft(r.deadline);
     let due = "";
     if (statusOf(r.id) !== "finished" && dl !== null) due = dl < 0 ? `<div class="s late">Telat ${-dl} hari</div>` : dl === 0 ? `<div class="s late">Hari ini</div>` : `<div class="s">${dl} hari lagi</div>`;
-    const pr = ["Slow","Normal","Urgent"].includes(r.priority) ? r.priority : "Normal";
+    const pr = PRIO(r.priority);
     return `<tr data-id="${esc(r.id)}" tabindex="0">
       <td class="mono">${esc(r.code||r.id)}</td>
-      <td><div class="t">${esc(r.title)}</div><div class="s">${esc(r.type)}</div></td>
-      <td><div>${esc(r.requester)}</div><div class="s">${esc(r.division)}</div></td>
+      <td><div class="t">${esc(r.title)}</div><div class="s">${esc(r.requester)}</div></td>
+      <td>${esc(r.type)}</td>
+      <td>${esc(brandOf(r))}</td>
       <td class="num"><div>${fmtDate(r.deadline)}</div>${due}</td>
       <td><span class="prio ${pr}">${pr}</span></td>
-      <td>${a.pic ? esc(a.pic) : '<span class="unassigned">Belum ditunjuk</span>'}</td>
-      <td><span class="chip ${st[1]}">${st[0]}</span></td></tr>`;
+      <td><span class="chip ${st[1]}">${st[0]}</span></td>
+      <td>${a.approval ? esc(a.approval) : '<span class="unassigned">—</span>'}</td>
+      <td>${esc(a.production || "Pending")}</td>
+      <td>${a.pic ? esc(a.pic) : '<span class="unassigned">Belum ditunjuk</span>'}</td></tr>`;
   }).join("");
 
   $("empty").hidden = list.length > 0;
@@ -446,23 +463,25 @@ $("rows").addEventListener("keydown", e => { if (e.key === "Enter") { const tr =
 const link = t => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 function fillDetail(id, live){
   const r = S.requests.find(x => x.id === id); if (!r) { $("dlg").close(); return; }
-  const a = S.assign[id] || {}, st = STATUS[statusOf(id)], pr = ["Slow","Normal","Urgent"].includes(r.priority) ? r.priority : "Normal";
+  const a = S.assign[id] || {}, st = STATUS[statusOf(id)], pr = PRIO(r.priority);
   $("d-code").textContent = r.code || r.id; $("d-title").textContent = r.title;
   $("d-chips").innerHTML = `<span class="chip ${st[1]}">${st[0]}</span><span class="prio ${pr}" style="align-self:center">${pr}</span>`;
   const rows = [
-    ["PIC", a.pic || "Belum ditunjuk"], ["Catatan supervisor", a.note],
-    ["Requester", `${r.requester} · ${r.division}`], ["Dikirim", fmtTime(r.createdAt)], ["Deadline", fmtDate(r.deadline)],
-    ["Link brief", r.briefLink], ["Jenis design", r.type], ["Channel", r.channel], ["Output", r.output], ["Catatan", r.notes],
+    ["Designer", a.pic || "Belum ditunjuk"], ["Approval status", a.approval], ["Production status", a.production || "Pending"],
+    ["Asset link", a.assetLink], ["Technical draw link", a.techLink], ["Catatan supervisor", a.note],
+    ["Requester", r.requester], ["Brand", brandOf(r)], ["Design category", r.type], ["Dikirim", fmtTime(r.createdAt)], ["Deadline", fmtDate(r.deadline)],
+    ["Link brief", r.briefLink], ["Spesifikasi & catatan", r.notes],
     ["Mulai dikerjakan", a.startedAt && fmtTime(a.startedAt)], ["Selesai", a.finishedAt && fmtTime(a.finishedAt)], ["Update terakhir", a.updatedAt && fmtTime(a.updatedAt)],
   ].filter(([,v]) => v);
   $("d-list").innerHTML = rows.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${link(v)}</dd>`).join("");
   $("d-sup").hidden = !S.admin;
   if (S.admin && !live) {
     const opts = [...new Set([...S.team, a.pic].filter(Boolean))];
+    $("s-approval").value = a.approval || ""; $("s-prod").value = a.production || "Pending"; $("s-asset").value = a.assetLink || ""; $("s-tech").value = a.techLink || "";
     $("s-pic").innerHTML = '<option value="">— Belum ditunjuk —</option>' + opts.map(p => `<option>${esc(p)}</option>`).join("");
     $("s-pic").value = a.pic || "";
     document.querySelector(`input[name="s-status"][value="${statusOf(id)}"]`).checked = true;
-    $("s-note").value = a.note || ""; $("s-msg").className = "msg"; $("s-msg").textContent = S.team.length ? "" : "Tambahkan anggota tim di bawah tabel untuk mengisi daftar PIC."; $("s-confirm").hidden = true;
+    $("s-note").value = a.note || ""; $("s-msg").className = "msg"; $("s-msg").textContent = S.team.length ? "" : "Tambahkan designer di bawah tabel untuk mengisi daftar Designer."; $("s-confirm").hidden = true;
   }
 }
 function openDetail(id){ S.openId = id; fillDetail(id, false); $("dlg").showModal(); }
@@ -473,10 +492,10 @@ $("dlg").addEventListener("close", () => { S.openId = null; });
 $("s-save").addEventListener("click", async () => {
   const id = S.openId; if (!id || !S.admin) return;
   const prev = S.assign[id] || {}, status = document.querySelector('input[name="s-status"]:checked').value, now = new Date().toISOString();
-  const next = {pic:$("s-pic").value, status, note:$("s-note").value.trim(), updatedAt:now, updatedBy:S.uid,
+  const next = {pic:$("s-pic").value, status, approval:$("s-approval").value, production:$("s-prod").value, assetLink:$("s-asset").value.trim(), techLink:$("s-tech").value.trim(), note:$("s-note").value.trim(), updatedAt:now, updatedBy:S.uid,
     startedAt: prev.startedAt || (status !== "not_started" ? now : null),
     finishedAt: status === "finished" ? (prev.finishedAt || now) : null};
-  if (status !== "not_started" && !next.pic) { $("s-msg").className="msg err"; $("s-msg").textContent = "Tunjuk PIC dulu sebelum mengubah status."; return; }
+  if (status !== "not_started" && !next.pic) { $("s-msg").className="msg err"; $("s-msg").textContent = "Pilih Designer dulu sebelum mengubah status."; return; }
   $("s-save").disabled = true; $("s-msg").className="msg"; $("s-msg").textContent = "Menyimpan…";
   try { await put("assignments", id, next); syncSheet({action:"assign", code:(S.requests.find(x=>x.id===id)||{}).code||id, ...next}); $("s-msg").textContent = "Tersimpan."; }
   catch (e) { $("s-msg").className="msg err"; $("s-msg").textContent = e.code === "permission-denied" ? "Ditolak: email kamu belum terdaftar sebagai supervisor di firestore.rules." : "Gagal menyimpan. Coba lagi."; }
