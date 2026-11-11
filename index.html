@@ -157,8 +157,7 @@ dd a{color:var(--accent-text)}
       <a href="#database" id="tab-database">Database</a>
     </nav>
     <div class="auth">
-      <span id="auth-who" hidden></span>
-      <button class="btn sm" type="button" id="auth-btn">Login supervisor</button>
+      <button class="btn sm" type="button" id="auth-btn">Mode supervisor</button>
     </div>
   </div>
 </header>
@@ -295,7 +294,6 @@ dd a{color:var(--accent-text)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 /* ============ 1. ISI DENGAN CONFIG FIREBASE KAMU ============ */
@@ -305,9 +303,6 @@ const firebaseConfig = {
   projectId: "rockstar-330e1",
   appId: "1:899863228344:web:c3f3d15935cb9461a6694d"
 };
-/* ============ 2. ISI EMAIL SUPERVISOR (harus sama dengan di firestore.rules) ============ */
-const ADMIN_EMAILS = ["EMAIL_SUPERVISOR@gmail.com"];
-/* ============================================================ */
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -315,8 +310,8 @@ const STATUS = {not_started:["Not started","none"], in_progress:["On progress","
 const S = {uid:null, admin:false, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
 
 const configured = !firebaseConfig.apiKey.startsWith("ISI_");
-let db, auth;
-if (configured) { const app = initializeApp(firebaseConfig); db = getFirestore(app); auth = getAuth(app); }
+let db;
+if (configured) { db = getFirestore(initializeApp(firebaseConfig)); }
 
 /* ---------- data layer: Firestore, atau mode lokal (localStorage) kalau Firebase belum diisi ---------- */
 const LKEY = "crd-local-v1";
@@ -360,21 +355,12 @@ const daysLeft = s => { if(!s) return null; const [y,m,d]=s.split("-").map(Numbe
 const statusOf = id => (S.assign[id] && S.assign[id].status) || "not_started";
 const isLate = r => statusOf(r.id) !== "finished" && (daysLeft(r.deadline) ?? 0) < 0;
 
-/* ---------- auth (supervisor) ---------- */
-$("auth-btn").addEventListener("click", async () => {
-  if (!configured) { applyAuth(S.admin ? null : {uid:"local", email:"Supervisor (mode lokal)", emailVerified:true, local:true}); return; }
-  try { S.admin ? await signOut(auth) : await signInWithPopup(auth, new GoogleAuthProvider()); }
-  catch (e) { showConn("Login gagal (" + (e.code || "error") + ")."); }
-});
-function applyAuth(user){
-  S.uid = user ? user.uid : null;
-  S.admin = !!(user && user.emailVerified && (user.local || ADMIN_EMAILS.includes(user.email)));
-  $("auth-who").hidden = !user;
-  $("auth-who").textContent = user ? user.email : "";
-  $("auth-btn").textContent = user ? "Logout" : "Login supervisor";
-  if (user && !S.admin) showConn("Akun " + user.email + " bukan supervisor. Logout lalu pakai akun yang terdaftar.");
-  else if (S.admin) showConn("");
-  $("db-sub").textContent = S.admin ? "Kamu masuk sebagai supervisor: klik baris untuk menunjuk PIC dan mengubah status." : "Semua request design, PIC, dan progresnya. Klik baris untuk melihat brief lengkap.";
+/* ---------- mode supervisor (tanpa login) ---------- */
+$("auth-btn").addEventListener("click", () => applyAuth(!S.admin));
+function applyAuth(on){
+  S.admin = on;
+  $("auth-btn").textContent = on ? "Keluar mode supervisor" : "Mode supervisor";
+  $("db-sub").textContent = on ? "Mode supervisor aktif: klik baris untuk menunjuk PIC dan mengubah status." : "Semua request design, PIC, dan progresnya. Klik baris untuk melihat brief lengkap.";
   render();
 }
 
@@ -522,7 +508,6 @@ if (!configured) {
   pullLocal(); addEventListener("storage", pullLocal);
 } else {
   const fail = e => showConn("Koneksi ke database gagal (" + e.code + "). Cek firestore.rules dan konfigurasi.");
-  onAuthStateChanged(auth, applyAuth);
   onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); S.gotReq = true; render(); }, fail);
   onSnapshot(collection(db,"assignments"), s => { const m = {}; s.docs.forEach(d => m[d.id] = d.data()); S.assign = m; render(); }, fail);
   onSnapshot(doc(db,"settings","team"), s => { S.team = (s.exists() && Array.isArray(s.data().members)) ? s.data().members.slice() : []; render(); }, fail);
