@@ -47,8 +47,6 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tabs a:hover{color:var(--bar-ink)}
 .tabs a[aria-current="page"]{background:var(--accent);color:#fff;font-weight:600}
 
-.auth{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--bar-muted)}
-.auth .btn{background:transparent;color:var(--bar-ink);border:1px solid var(--bar-muted)}
 main{padding-block:28px 64px}
 .view{display:grid;gap:24px}
 .intro{display:grid;gap:6px;max-width:65ch}
@@ -164,10 +162,6 @@ fieldset.plain:disabled{opacity:.45}
       <a href="#request" id="tab-request">Buat request</a>
       <a href="#database" id="tab-database">Database</a>
     </nav>
-    <div class="auth">
-      <span id="auth-who" hidden></span>
-      <button class="btn sm" type="button" id="auth-btn">Login staff</button>
-    </div>
   </div>
 </header>
 
@@ -287,7 +281,6 @@ fieldset.plain:disabled{opacity:.45}
     <div class="gate" id="d-brand" hidden>
       <h3 id="b-title">Approval Tim Brand</h3>
       <p class="msg" id="b-state" style="margin:0"></p>
-      <div id="b-form" style="display:grid;gap:14px">
       <div class="grid">
         <div class="field"><label for="b-name">Nama approver Brand</label><input type="text" id="b-name" placeholder="nama kamu"></div>
         <div class="field"><label for="b-note">Catatan / alasan</label><input type="text" id="b-note" placeholder="wajib diisi kalau menolak"></div>
@@ -296,7 +289,6 @@ fieldset.plain:disabled{opacity:.45}
         <button class="btn" type="button" id="b-ok">Setujui</button>
         <button class="btn danger" type="button" id="b-no">Tolak</button>
         <span class="msg" id="b-msg"></span>
-      </div>
       </div>
     </div>
     <div class="sup" id="d-sup" hidden>
@@ -339,7 +331,6 @@ fieldset.plain:disabled{opacity:.45}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 /* ============ 1. ISI DENGAN CONFIG FIREBASE KAMU ============ */
@@ -356,13 +347,11 @@ const STATUS = {not_started:["Not Started","none"], in_progress:["In Progress","
 const PRIO = v => ({Urgent:"High", Normal:"Medium", Slow:"Low"}[v] || (["High","Medium","Low"].includes(v) ? v : "Medium"));
 const brandOf = r => r.brand || r.division || "";
 const brandState = (r, a) => (a && a.brandApproval) || (r.needsApproval ? "pending" : "na");   // na | pending | approved | rejected
-/* Hanya email ini yang boleh mengubah database (harus sama dengan firestore.rules). Request tetap terbuka untuk semua. */
-const ADMIN_EMAILS = ["permataadilla@gmail.com", "adhikw@gmail.com", "beninganggadita11@gmail.com"];
-const S = {uid:null, email:null, admin:false, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
+const S = {uid:null, admin:true, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
 
 const configured = !firebaseConfig.apiKey.startsWith("ISI_");
-let db, auth;
-if (configured) { const app = initializeApp(firebaseConfig); db = getFirestore(app); auth = getAuth(app); }
+let db;
+if (configured) { db = getFirestore(initializeApp(firebaseConfig)); }
 
 /* URL Google Apps Script (lihat apps-script.gs). Kosongkan kalau tidak mau sinkron ke Google Sheet. */
 const SHEET_URL = "";
@@ -412,21 +401,6 @@ const fmtTime = s => s ? new Date(s).toLocaleString("id-ID",{day:"numeric",month
 const daysLeft = s => { if(!s) return null; const [y,m,d]=s.split("-").map(Number); return Math.round((new Date(y,m-1,d)-today())/864e5); };
 const statusOf = id => (S.assign[id] && S.assign[id].status) || "not_started";
 const isLate = r => statusOf(r.id) !== "finished" && (daysLeft(r.deadline) ?? 0) < 0;
-
-/* ---------- login staff ---------- */
-$("auth-btn").addEventListener("click", async () => {
-  try { auth.currentUser ? await signOut(auth) : await signInWithPopup(auth, new GoogleAuthProvider()); }
-  catch (e) { showConn("Login gagal (" + (e.code || "error") + ")."); }
-});
-function applyAuth(user){
-  S.uid = user ? user.uid : null; S.email = user ? user.email : null;
-  S.admin = !!(user && user.emailVerified && ADMIN_EMAILS.includes((user.email || "").toLowerCase()));
-  $("auth-who").hidden = !user; $("auth-who").textContent = user ? user.email : "";
-  $("auth-btn").textContent = user ? "Logout" : "Login staff";
-  showConn(user && !S.admin ? "Akun " + user.email + " tidak punya akses edit. Hanya staff terdaftar yang bisa mengubah database." : "");
-  $("db-sub").textContent = S.admin ? "Kamu login sebagai staff: klik baris untuk mengatur designer, status, dan approval." : "Semua request design, PIC, dan progresnya. Klik baris untuk melihat brief lengkap.";
-  render();
-}
 
 /* ---------- draft ---------- */
 const form = $("brief"), DRAFT = "crd-draft-v2";
@@ -550,8 +524,7 @@ function fillDetail(id, live){
   if (locked) {
     $("b-state").textContent = bs === "rejected" ? "Ditolak oleh " + (a.brandApprover || "Brand") + (a.brandNote ? ": " + a.brandNote : "") + ". Masih bisa disetujui ulang." : "Request dari " + (r.teamName || "tim non-Brand") + " ini menunggu persetujuan Tim Brand " + brandOf(r) + " sebelum diproses Tim Creative.";
     $("b-no").hidden = bs === "rejected";
-    $("b-form").hidden = !S.admin;
-    if (!live) { $("b-name").value = S.email || ""; $("b-name").readOnly = !!S.email; $("b-note").value = ""; $("b-msg").textContent = ""; }
+    if (!live) { $("b-name").value = ""; $("b-note").value = ""; $("b-msg").textContent = ""; }
   }
   $("s-fields").disabled = locked; $("s-save").disabled = locked; $("s-lock").hidden = !locked;
   $("d-sup").hidden = !S.admin;
@@ -592,7 +565,7 @@ $("s-del-yes").addEventListener("click", async () => {
 /* ---------- approval Brand ---------- */
 async function brandDecide(ok){
   const id = S.openId, r = S.requests.find(x => x.id === id); if (!r) return;
-  const name = (S.email || $("b-name").value).trim(), note = $("b-note").value.trim(), msg = $("b-msg");
+  const name = $("b-name").value.trim(), note = $("b-note").value.trim(), msg = $("b-msg");
   msg.className = "msg";
   if (!name) { msg.className = "msg err"; msg.textContent = "Isi nama approver Brand."; return; }
   if (!ok && !note) { msg.className = "msg err"; msg.textContent = "Isi alasan penolakan."; return; }
@@ -616,11 +589,9 @@ $("team-list").addEventListener("click", e => { const b = e.target.closest("[dat
 function showConn(t){ $("conn").textContent = t; $("conn").hidden = !t; }
 render();
 if (!configured) {
-  S.admin = true; $("auth-btn").hidden = true;
   showConn("Mode lokal: data hanya tersimpan di browser ini dan tidak dibagikan ke orang lain. Isi firebaseConfig di index.html untuk mengaktifkan database bersama.");
   pullLocal(); addEventListener("storage", pullLocal);
 } else {
-  onAuthStateChanged(auth, applyAuth);
   const fail = e => showConn("Koneksi ke database gagal (" + e.code + "). Cek firestore.rules dan konfigurasi.");
   onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); S.gotReq = true; render(); }, fail);
   onSnapshot(collection(db,"assignments"), s => { const m = {}; s.docs.forEach(d => m[d.id] = d.data()); S.assign = m; render(); }, fail);

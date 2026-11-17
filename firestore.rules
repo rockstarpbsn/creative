@@ -1,30 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Hanya email ini yang boleh mengubah database. Samakan dengan ADMIN_EMAILS di index.html.
-    function isAdmin() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email in [
-          'permataadilla@gmail.com',
-          'adhikw@gmail.com',
-          'beninganggadita11@gmail.com'
-        ];
-    }
-
-    // Request: semua orang boleh membaca dan MEMBUAT (kirim request). Ubah/hapus hanya staff.
-    match /requests/{id} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['requester','brand','title','type','briefLink','deadline','createdAt'])
-                    && request.resource.data.title is string && request.resource.data.title.size() < 200
-                    && request.resource.data.requester is string && request.resource.data.requester.size() < 120
-                    && (!('notes' in request.resource.data) || request.resource.data.notes.size() < 3000);
-      allow update, delete: if isAdmin();
-    }
-
-    // Designer, status, approval Brand, daftar tim: hanya staff.
-    match /assignments/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /settings/{id}    { allow read: if true; allow write: if isAdmin(); }
+    // Tanpa login: siapa pun yang punya link web bisa membaca dan menulis.
+    match /requests/{id}    { allow read, write: if true; }
+    match /assignments/{id} { allow read, write: if true; }
+    match /settings/{id}    { allow read, write: if true; }
   }
 }
