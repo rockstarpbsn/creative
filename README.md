@@ -17,3 +17,8 @@ Web statis (GitHub Pages) + Firebase Firestore + Firebase Auth (Google) untuk su
 3. Buka `https://USERNAME.github.io/NAMA-REPO/`.
 
 Catatan: `apiKey` Firebase memang boleh publik; keamanan data diatur oleh `firestore.rules`.
+
+## Akses edit (login staff)
+- Request: terbuka untuk semua. Mengubah database (designer, status, approval Brand, hapus, daftar tim): hanya email staff.
+- Daftar email ada di DUA tempat dan harus sama: `ADMIN_EMAILS` di `index.html` dan `isAdmin()` di `firestore.rules` (lalu Publish rules di Firebase Console).
+- Firebase Console: Authentication > Sign-in method > Google (Enable), dan Authorized domains berisi `rockstarpbsn.github.io`.
