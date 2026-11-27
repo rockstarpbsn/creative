@@ -194,17 +194,19 @@ fieldset.plain:disabled{opacity:.45}
           <div class="field"><label for="f-team">Tim requester <span class="req">*</span></label>
             <select id="f-team" name="teamType" required>
               <option value="">Pilih tim kamu</option>
-              <option value="brand">Tim Brand</option>
-              <option value="other">Tim lain (non-Brand)</option>
+              <option value="marketing">Team Marketing</option>
+              <option value="sales">Team Sales</option>
+              <option value="bizdev">Team Business Development</option>
+              <option value="other">Lainnya</option>
             </select></div>
-          <div class="field" id="teamname-field" hidden><label for="f-teamname">Nama tim / divisi <span class="req">*</span></label><input type="text" id="f-teamname" name="teamName" placeholder="mis. Sales, Trade Marketing, HR"></div>
+          <div class="field" id="teamname-field" hidden><label for="f-teamname">Sebutkan tim / divisi <span class="req">*</span></label><input type="text" id="f-teamname" name="teamName" placeholder="mis. Trade Marketing, HR, Finance"></div>
           <div class="field"><label for="f-brand">Brand <span class="req">*</span></label>
             <select id="f-brand" name="brand" required>
               <option value="">Pilih brand</option>
               <option>RS</option><option>RSM</option><option>RSK</option><option>RSP</option><option>PBSN</option><option>NTD</option>
             </select></div>
         </div>
-        <div class="notice warn" id="team-hint" hidden><strong>Perlu approval Tim Brand.</strong><span>Request dari tim non-Brand akan ditahan dulu sampai Tim Brand untuk brand yang dipilih menyetujuinya. Setelah disetujui, baru masuk ke antrean Tim Creative.</span></div>
+        <div class="notice warn" id="team-hint" hidden><strong>Perlu approval Tim Brand.</strong><span>Semua request ditahan dulu sampai Tim Brand untuk brand yang dipilih menyetujuinya. Setelah disetujui, baru masuk ke antrean Tim Creative.</span></div>
       </fieldset>
       <fieldset>
         <legend>Task</legend>
@@ -279,7 +281,7 @@ fieldset.plain:disabled{opacity:.45}
   <section class="view" id="view-kv" hidden>
     <div class="intro">
       <h2>Approval KV</h2>
-      <p>Ajukan key visual (KV) untuk di-approve sebelum dipakai. Pengajuan dari tim non-Brand menunggu approval Tim Brand; setelah disetujui langsung berstatus Completed (tidak diproses Tim Design). Pengajuan dari Tim Brand langsung Completed.</p>
+      <p>Ajukan key visual (KV) untuk di-approve sebelum dipakai. Semua pengajuan menunggu approval Tim Brand; setelah disetujui langsung berstatus Completed (tidak diproses Tim Design).</p>
     </div>
     <nav class="subtabs" aria-label="Approval KV">
       <a href="#kv" id="sub-form">Ajukan KV</a>
@@ -298,8 +300,8 @@ fieldset.plain:disabled{opacity:.45}
           <div class="grid">
             <div class="field"><label for="k-requester">Nama requester <span class="req">*</span></label><input type="text" id="k-requester" name="requester" required autocomplete="name"></div>
             <div class="field"><label for="k-team">Tim requester <span class="req">*</span></label>
-              <select id="k-team" name="teamType" required><option value="">Pilih tim kamu</option><option value="brand">Tim Brand</option><option value="other">Tim lain (non-Brand)</option></select></div>
-            <div class="field" id="k-teamname-field" hidden><label for="k-teamname">Nama tim / divisi <span class="req">*</span></label><input type="text" id="k-teamname" name="teamName" placeholder="mis. Sales, Trade Marketing, HR"></div>
+              <select id="k-team" name="teamType" required><option value="">Pilih tim kamu</option><option value="marketing">Team Marketing</option><option value="sales">Team Sales</option><option value="bizdev">Team Business Development</option><option value="other">Lainnya</option></select></div>
+            <div class="field" id="k-teamname-field" hidden><label for="k-teamname">Sebutkan tim / divisi <span class="req">*</span></label><input type="text" id="k-teamname" name="teamName" placeholder="mis. Trade Marketing, HR, Finance"></div>
             <div class="field"><label for="k-brand">Brand <span class="req">*</span></label>
               <select id="k-brand" name="brand" required><option value="">Pilih brand</option><option>RS</option><option>RSM</option><option>RSK</option><option>RSP</option><option>PBSN</option><option>NTD</option></select></div>
           </div>
@@ -467,6 +469,9 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const STATUS = {not_started:["Not Started","none"], in_progress:["In Progress","prog"], on_hold:["On Hold","hold"], finished:["Completed","done"]};
 const PRIO = v => ({Urgent:"High", Normal:"Medium", Slow:"Low"}[v] || (["High","Medium","Low"].includes(v) ? v : "Medium"));
 const brandOf = r => r.brand || r.division || "";
+const TEAMS = {marketing:"Team Marketing", sales:"Team Sales", bizdev:"Team Business Development"};
+const teamLabel = (type, name) => TEAMS[type] || ("Lainnya" + (name ? ": " + name : ""));
+const teamOf = r => r.team || (r.needsApproval ? (r.teamName ? "Tim lain: " + r.teamName : "Tim lain (non-Brand)") : "Tim Brand");   // data lama tetap terbaca
 const brandState = (r, a) => (a && a.brandApproval) || (r.needsApproval ? "pending" : "na");   // na | pending | approved | rejected
 const S = {kv:[], kvFilter:"all", kvOpen:null, uid:null, admin:true, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
 
@@ -531,7 +536,7 @@ let draftT; form.addEventListener("input", () => { clearTimeout(draftT); draftT 
 /* ---------- tim requester ---------- */
 function toggleTeam(){
   const other = $("f-team").value === "other";
-  $("teamname-field").hidden = !other; $("f-teamname").required = other; $("team-hint").hidden = !other;
+  $("teamname-field").hidden = !other; $("f-teamname").required = other; $("team-hint").hidden = !$("f-team").value;
 }
 $("f-team").addEventListener("change", toggleTeam); toggleTeam();
 
@@ -549,11 +554,11 @@ form.addEventListener("submit", async e => {
   const id = code();
   $("submit").disabled = true; msg.textContent = "Mengirim…";
   try {
-    const needsApproval = data.teamType === "other";
-    const rec = {...data, code:id, needsApproval, createdAt:new Date().toISOString(), requesterId:S.uid};
+    const needsApproval = true;                                         // semua tim menunggu approval Brand
+    const rec = {...data, team:teamLabel(data.teamType, data.teamName), code:id, needsApproval, createdAt:new Date().toISOString(), requesterId:S.uid};
     await put("requests", id, rec);
     if (!needsApproval) syncSheet({action:"request", ...rec});        // non-Brand: masuk Sheet setelah Brand approve
-    $("sent-extra").textContent = needsApproval ? "Request ditahan dulu: menunggu approval Tim Brand " + data.brand + ". Setelah disetujui baru masuk ke antrean Tim Creative." : "Status awal: Not Started, menunggu supervisor menunjuk designer.";
+    $("sent-extra").textContent = "Request ditahan dulu: menunggu approval Tim Brand " + data.brand + ". Setelah disetujui baru masuk ke antrean Tim Creative.";
     form.reset(); toggleTeam(); try { localStorage.removeItem(DRAFT); } catch {}
     $("sent-code").textContent = id; $("sent").hidden = false; form.hidden = true;
     msg.textContent = "Kolom bertanda * wajib diisi.";
@@ -596,7 +601,7 @@ function render(){
     const pr = PRIO(r.priority);
     return `<tr data-id="${esc(r.id)}" tabindex="0">
       <td class="mono">${esc(r.code||r.id)}</td>
-      <td><div class="t">${esc(r.title)}</div><div class="s">${esc(r.requester)} · ${r.needsApproval ? esc(r.teamName || "Tim lain") : "Tim Brand"}</div></td>
+      <td><div class="t">${esc(r.title)}</div><div class="s">${esc(r.requester)} · ${esc(teamOf(r))}</div></td>
       <td>${esc(r.type)}</td>
       <td>${esc(brandOf(r))}</td>
       <td class="num"><div>${fmtDate(r.deadline)}</div>${due}</td>
@@ -636,7 +641,7 @@ function fillDetail(id, live){
   const rows = [
     ["Designer", a.pic || "Belum ditunjuk"], ["Approval status", a.approval], ["Production status", a.production || "Pending"],
     ["Asset link", a.assetLink], ["Technical draw link", a.techLink], ["Catatan supervisor", a.note],
-    ["Requester", r.requester + " · " + (r.needsApproval ? (r.teamName || "Tim lain (non-Brand)") : "Tim Brand")], ["Approval Brand", ({pending:"Menunggu", approved:"Disetujui", rejected:"Ditolak"}[brandState(r, a)] || "") + (a.brandApprover ? " oleh " + a.brandApprover + (a.brandAt ? " · " + fmtTime(a.brandAt) : "") : "")], ["Catatan Brand", a.brandNote], ["Brand", brandOf(r)], ["Design category", r.type], ["Dikirim", fmtTime(r.createdAt)], ["Deadline", fmtDate(r.deadline)],
+    ["Requester", r.requester + " · " + teamOf(r)], ["Approval Brand", ({pending:"Menunggu", approved:"Disetujui", rejected:"Ditolak"}[brandState(r, a)] || "") + (a.brandApprover ? " oleh " + a.brandApprover + (a.brandAt ? " · " + fmtTime(a.brandAt) : "") : "")], ["Catatan Brand", a.brandNote], ["Brand", brandOf(r)], ["Design category", r.type], ["Dikirim", fmtTime(r.createdAt)], ["Deadline", fmtDate(r.deadline)],
     ["Link brief", r.briefLink], ["Spesifikasi & catatan", r.notes],
     ["Mulai dikerjakan", a.startedAt && fmtTime(a.startedAt)], ["Selesai", a.finishedAt && fmtTime(a.finishedAt)], ["Update terakhir", a.updatedAt && fmtTime(a.updatedAt)],
   ].filter(([,v]) => v);
@@ -644,7 +649,7 @@ function fillDetail(id, live){
   const bs = brandState(r, a), locked = bs === "pending" || bs === "rejected";
   $("d-brand").hidden = !locked;
   if (locked) {
-    $("b-state").textContent = bs === "rejected" ? "Ditolak oleh " + (a.brandApprover || "Brand") + (a.brandNote ? ": " + a.brandNote : "") + ". Masih bisa disetujui ulang." : "Request dari " + (r.teamName || "tim non-Brand") + " ini menunggu persetujuan Tim Brand " + brandOf(r) + " sebelum diproses Tim Creative.";
+    $("b-state").textContent = bs === "rejected" ? "Ditolak oleh " + (a.brandApprover || "Brand") + (a.brandNote ? ": " + a.brandNote : "") + ". Masih bisa disetujui ulang." : "Request dari " + teamOf(r) + " ini menunggu persetujuan Tim Brand " + brandOf(r) + " sebelum diproses Tim Creative.";
     $("b-no").hidden = bs === "rejected";
     if (!live) { $("b-name").value = ""; $("b-note").value = ""; $("b-msg").textContent = ""; }
   }
@@ -747,10 +752,9 @@ kvForm.addEventListener("submit", async e => {
   try {
     const image = await shrinkImage($("k-image").files[0]);
     const id = kvCode(); msg.textContent = "Mengirim…";
-    const auto = fd.get("teamType") === "brand";                       // Tim Brand: tidak perlu approval
-    await put("kvApprovals", id, {code:id, requester:fd.get("requester").trim(), teamType:fd.get("teamType"), teamName:(fd.get("teamName") || "").trim(), team: fd.get("teamType") === "brand" ? "Tim Brand" : "Tim lain: " + (fd.get("teamName") || "").trim(), brand:fd.get("brand"),
-      objective:fd.get("objective").trim(), audience:fd.get("audience").trim(), placement, timeline, image, status: auto ? "completed" : "pending", approver: auto ? "Tim Brand (otomatis)" : "", decidedAt: auto ? new Date().toISOString() : null, createdAt:new Date().toISOString()});
-    $("kv-sent-extra").textContent = auto ? "Status: Completed. Tim Brand tidak perlu approval." : "Status: Menunggu approval Tim Brand " + fd.get("brand") + ". Setelah disetujui, otomatis Completed.";
+    await put("kvApprovals", id, {code:id, requester:fd.get("requester").trim(), teamType:fd.get("teamType"), teamName:(fd.get("teamName") || "").trim(), team:teamLabel(fd.get("teamType"), (fd.get("teamName") || "").trim()), brand:fd.get("brand"),
+      objective:fd.get("objective").trim(), audience:fd.get("audience").trim(), placement, timeline, image, status:"pending", createdAt:new Date().toISOString()});
+    $("kv-sent-extra").textContent = "Status: Menunggu approval Tim Brand " + fd.get("brand") + ". Setelah disetujui, otomatis Completed.";
     kvForm.reset(); toggleKvTeam(); $("k-preview").hidden = true; $("k-pl-text").hidden = true; $("k-tl-text").hidden = true;
     $("kv-sent-code").textContent = id; $("kv-sent").hidden = false; kvForm.hidden = true; msg.textContent = "Kolom bertanda * wajib diisi.";
     scrollTo({top:0, behavior:"smooth"});
