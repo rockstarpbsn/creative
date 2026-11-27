@@ -279,7 +279,7 @@ fieldset.plain:disabled{opacity:.45}
   <section class="view" id="view-kv" hidden>
     <div class="intro">
       <h2>Approval KV</h2>
-      <p>Ajukan key visual (KV) untuk di-approve sebelum dipakai. Isi tujuan, target audience, penempatan, dan lama tayang, lalu unggah gambar KV-nya.</p>
+      <p>Ajukan key visual (KV) untuk di-approve sebelum dipakai. Pengajuan dari tim non-Brand menunggu approval Tim Brand; setelah disetujui langsung berstatus Completed (tidak diproses Tim Design). Pengajuan dari Tim Brand langsung Completed.</p>
     </div>
     <nav class="subtabs" aria-label="Approval KV">
       <a href="#kv" id="sub-form">Ajukan KV</a>
@@ -289,7 +289,7 @@ fieldset.plain:disabled{opacity:.45}
     <div id="kv-formbox" class="view">
       <div class="notice ok" id="kv-sent" hidden>
         <strong>Pengajuan terkirim.</strong>
-        <span>Kode pengajuan kamu <span class="mono" id="kv-sent-code"></span>. Status: Menunggu review.</span>
+        <span>Kode pengajuan kamu <span class="mono" id="kv-sent-code"></span>. <span id="kv-sent-extra"></span></span>
         <div class="actions" style="margin-top:8px"><a class="btn sm" href="#kv-list" style="text-decoration:none">Lihat daftar approval</a><button class="btn ghost sm" type="button" id="kv-again">Ajukan KV lain</button></div>
       </div>
       <form id="kv-form" novalidate>
@@ -344,9 +344,8 @@ fieldset.plain:disabled{opacity:.45}
     <div id="kv-listbox" class="view" hidden>
       <div class="stats">
         <button class="stat" type="button" data-kf="all" aria-pressed="true"><b id="kc-all">0</b><span>Semua pengajuan</span></button>
-        <button class="stat s-none" type="button" data-kf="pending" aria-pressed="false"><b id="kc-pending">0</b><span>Menunggu review</span></button>
-        <button class="stat s-prog" type="button" data-kf="revision" aria-pressed="false"><b id="kc-revision">0</b><span>Perlu revisi</span></button>
-        <button class="stat s-done" type="button" data-kf="approved" aria-pressed="false"><b id="kc-approved">0</b><span>Disetujui</span></button>
+        <button class="stat s-prog" type="button" data-kf="pending" aria-pressed="false"><b id="kc-pending">0</b><span>Menunggu approval Brand</span></button>
+        <button class="stat s-done" type="button" data-kf="completed" aria-pressed="false"><b id="kc-completed">0</b><span>Completed</span></button>
         <button class="stat s-hold" type="button" data-kf="rejected" aria-pressed="false"><b id="kc-rejected">0</b><span>Ditolak</span></button>
       </div>
       <div class="tools"><input type="text" id="kq" placeholder="Cari kode, objective, brand, requester…" aria-label="Cari KV"></div>
@@ -428,16 +427,15 @@ fieldset.plain:disabled{opacity:.45}
     <img id="kd-img" class="kvimg" alt="Gambar KV" hidden>
     <dl id="kd-list"></dl>
     <div class="sup" id="kd-sup">
-      <h3>Review &amp; approval</h3>
-      <div class="field"><label for="kd-approver">Nama approver</label><input type="text" id="kd-approver" placeholder="nama kamu"></div>
+      <h3>Approval Tim Brand</h3>
+      <div class="field"><label for="kd-approver">Nama approver Brand</label><input type="text" id="kd-approver" placeholder="nama kamu"></div>
       <div class="field"><span style="font-weight:600;font-size:.88rem">Keputusan</span>
         <div class="seg" role="radiogroup" aria-label="Keputusan">
           <label class="none"><input type="radio" name="kd-status" value="pending">Menunggu</label>
-          <label class="done"><input type="radio" name="kd-status" value="approved">Disetujui</label>
-          <label class="prog"><input type="radio" name="kd-status" value="revision">Perlu revisi</label>
-          <label class="hold"><input type="radio" name="kd-status" value="rejected">Ditolak</label>
+          <label class="done"><input type="radio" name="kd-status" value="completed">Setujui → Completed</label>
+          <label class="hold"><input type="radio" name="kd-status" value="rejected">Tolak</label>
         </div></div>
-      <div class="field"><label for="kd-note">Catatan untuk requester</label><textarea id="kd-note" placeholder="wajib diisi kalau perlu revisi atau ditolak"></textarea></div>
+      <div class="field"><label for="kd-note">Catatan untuk requester</label><textarea id="kd-note" placeholder="wajib diisi kalau ditolak"></textarea></div>
       <div class="actions">
         <button class="btn" type="button" id="kd-save">Simpan keputusan</button>
         <button class="btn danger sm" type="button" id="kd-del">Hapus</button>
@@ -705,7 +703,8 @@ $("b-ok").addEventListener("click", () => brandDecide(true));
 $("b-no").addEventListener("click", () => brandDecide(false));
 
 /* ---------- Approval KV ---------- */
-const KV_STATUS = {pending:["Menunggu review","none"], approved:["Disetujui","done"], revision:["Perlu revisi","prog"], rejected:["Ditolak","hold"]};
+const KV_STATUS = {pending:["Menunggu approval Brand","prog"], completed:["Completed","done"], rejected:["Ditolak","hold"]};
+const kvStatus = r => { const v = r.status || "pending"; return v === "approved" ? "completed" : v === "revision" ? "pending" : v; };   // data lama dipetakan
 const kvForm = $("kv-form");
 const kvCode = () => "KV-" + code().slice(3);
 
@@ -748,8 +747,10 @@ kvForm.addEventListener("submit", async e => {
   try {
     const image = await shrinkImage($("k-image").files[0]);
     const id = kvCode(); msg.textContent = "Mengirim…";
+    const auto = fd.get("teamType") === "brand";                       // Tim Brand: tidak perlu approval
     await put("kvApprovals", id, {code:id, requester:fd.get("requester").trim(), teamType:fd.get("teamType"), teamName:(fd.get("teamName") || "").trim(), team: fd.get("teamType") === "brand" ? "Tim Brand" : "Tim lain: " + (fd.get("teamName") || "").trim(), brand:fd.get("brand"),
-      objective:fd.get("objective").trim(), audience:fd.get("audience").trim(), placement, timeline, image, status:"pending", createdAt:new Date().toISOString()});
+      objective:fd.get("objective").trim(), audience:fd.get("audience").trim(), placement, timeline, image, status: auto ? "completed" : "pending", approver: auto ? "Tim Brand (otomatis)" : "", decidedAt: auto ? new Date().toISOString() : null, createdAt:new Date().toISOString()});
+    $("kv-sent-extra").textContent = auto ? "Status: Completed. Tim Brand tidak perlu approval." : "Status: Menunggu approval Tim Brand " + fd.get("brand") + ". Setelah disetujui, otomatis Completed.";
     kvForm.reset(); toggleKvTeam(); $("k-preview").hidden = true; $("k-pl-text").hidden = true; $("k-tl-text").hidden = true;
     $("kv-sent-code").textContent = id; $("kv-sent").hidden = false; kvForm.hidden = true; msg.textContent = "Kolom bertanda * wajib diisi.";
     scrollTo({top:0, behavior:"smooth"});
@@ -761,15 +762,15 @@ kvForm.addEventListener("submit", async e => {
 $("kv-again").addEventListener("click", () => { $("kv-sent").hidden = true; kvForm.hidden = false; $("k-requester").focus(); });
 
 function renderKV(){
-  const rs = S.kv, n = {all:rs.length, pending:0, approved:0, revision:0, rejected:0};
-  rs.forEach(r => { n[r.status || "pending"]++; });
+  const rs = S.kv, n = {all:rs.length, pending:0, completed:0, rejected:0};
+  rs.forEach(r => { n[kvStatus(r)]++; });
   for (const k of Object.keys(n)) $("kc-" + k).textContent = n[k];
   document.querySelectorAll("[data-kf]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.kf === S.kvFilter)));
   const q = $("kq").value.trim().toLowerCase();
-  const list = rs.filter(r => (S.kvFilter === "all" || (r.status || "pending") === S.kvFilter) &&
+  const list = rs.filter(r => (S.kvFilter === "all" || kvStatus(r) === S.kvFilter) &&
     (!q || [r.code, r.objective, r.brand, r.requester, r.team, r.audience, (r.placement || []).join(" ")].join(" ").toLowerCase().includes(q)));
   $("kv-rows").innerHTML = list.map(r => {
-    const st = KV_STATUS[r.status || "pending"];
+    const st = KV_STATUS[kvStatus(r)];
     return `<tr data-id="${esc(r.id)}" tabindex="0">
       <td>${r.image ? `<img class="kvthumb" src="${esc(r.image)}" alt="">` : ""}</td>
       <td class="mono">${esc(r.code || r.id)}</td>
@@ -792,17 +793,17 @@ $("kv-rows").addEventListener("keydown", e => { if (e.key === "Enter") { const t
 
 function fillKV(id, live){
   const r = S.kv.find(x => x.id === id); if (!r) { $("kv-dlg").close(); return; }
-  const st = KV_STATUS[r.status || "pending"];
+  const st = KV_STATUS[kvStatus(r)];
   $("kd-code").textContent = r.code || r.id; $("kd-title").textContent = r.brand + " · " + (r.objective || "").slice(0, 60);
   $("kd-chips").innerHTML = `<span class="chip ${st[1]}">${st[0]}</span>`;
   $("kd-img").hidden = !r.image; if (r.image) $("kd-img").src = r.image;
   const rows = [["Objective", r.objective], ["Target audience", r.audience], ["Placement KV", (r.placement || []).join(", ")], ["Timeline terpasang", r.timeline],
     ["Requester", r.requester], ["Tim requester", r.team], ["Brand", r.brand], ["Dikirim", fmtTime(r.createdAt)],
-    ["Approver", r.approver], ["Catatan approver", r.note], ["Diputuskan", r.decidedAt && fmtTime(r.decidedAt)]].filter(([,v]) => v);
+    ["Approver Brand", r.approver], ["Catatan approver", r.note], ["Diputuskan", r.decidedAt && fmtTime(r.decidedAt)]].filter(([,v]) => v);
   $("kd-list").innerHTML = rows.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
   if (!live) {
     $("kd-approver").value = r.approver || ""; $("kd-note").value = r.note || ""; $("kd-msg").className = "msg"; $("kd-msg").textContent = ""; $("kd-confirm").hidden = true;
-    document.querySelector(`input[name="kd-status"][value="${r.status || "pending"}"]`).checked = true;
+    document.querySelector(`input[name="kd-status"][value="${kvStatus(r)}"]`).checked = true;
   }
 }
 function openKV(id){ S.kvOpen = id; fillKV(id, false); $("kv-dlg").showModal(); }
@@ -814,10 +815,10 @@ $("kd-save").addEventListener("click", async () => {
   const id = S.kvOpen; if (!id) return;
   const status = document.querySelector('input[name="kd-status"]:checked').value, approver = $("kd-approver").value.trim(), note = $("kd-note").value.trim(), msg = $("kd-msg");
   msg.className = "msg err";
-  if (status !== "pending" && !approver) { msg.textContent = "Isi nama approver."; return; }
-  if ((status === "revision" || status === "rejected") && !note) { msg.textContent = "Isi catatan untuk requester."; return; }
+  if (status !== "pending" && !approver) { msg.textContent = "Isi nama approver Brand."; return; }
+  if (status === "rejected" && !note) { msg.textContent = "Isi alasan penolakan."; return; }
   $("kd-save").disabled = true; msg.className = "msg"; msg.textContent = "Menyimpan…";
-  try { await put("kvApprovals", id, {status, approver, note, decidedAt: status === "pending" ? null : new Date().toISOString()}, true); msg.textContent = "Tersimpan."; }
+  try { await put("kvApprovals", id, {status, approver, note, decidedAt: status === "pending" ? null : new Date().toISOString()}, true); msg.textContent = status === "completed" ? "Disetujui. KV berstatus Completed." : "Tersimpan."; }
   catch (e) { msg.className = "msg err"; msg.textContent = e.code === "permission-denied" ? "Ditolak database (cek Firestore Rules)." : "Gagal menyimpan. Coba lagi."; }
   finally { $("kd-save").disabled = false; }
 });
