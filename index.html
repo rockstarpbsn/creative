@@ -297,7 +297,9 @@ fieldset.plain:disabled{opacity:.45}
           <legend>Requester</legend>
           <div class="grid">
             <div class="field"><label for="k-requester">Nama requester <span class="req">*</span></label><input type="text" id="k-requester" name="requester" required autocomplete="name"></div>
-            <div class="field"><label for="k-team">Tim requester <span class="req">*</span></label><input type="text" id="k-team" name="team" required placeholder="mis. Brand RSM, Sales, Trade Marketing"></div>
+            <div class="field"><label for="k-team">Tim requester <span class="req">*</span></label>
+              <select id="k-team" name="teamType" required><option value="">Pilih tim kamu</option><option value="brand">Tim Brand</option><option value="other">Tim lain (non-Brand)</option></select></div>
+            <div class="field" id="k-teamname-field" hidden><label for="k-teamname">Nama tim / divisi <span class="req">*</span></label><input type="text" id="k-teamname" name="teamName" placeholder="mis. Sales, Trade Marketing, HR"></div>
             <div class="field"><label for="k-brand">Brand <span class="req">*</span></label>
               <select id="k-brand" name="brand" required><option value="">Pilih brand</option><option>RS</option><option>RSM</option><option>RSK</option><option>RSP</option><option>PBSN</option><option>NTD</option></select></div>
           </div>
@@ -723,6 +725,8 @@ $("k-image").addEventListener("change", () => {
   if (!f) { pv.hidden = true; return; }
   pv.src = URL.createObjectURL(f); pv.hidden = false;
 });
+function toggleKvTeam(){ const o = $("k-team").value === "other"; $("k-teamname-field").hidden = !o; $("k-teamname").required = o; }
+$("k-team").addEventListener("change", toggleKvTeam); toggleKvTeam();
 $("k-pl-other").addEventListener("change", () => { $("k-pl-text").hidden = !$("k-pl-other").checked; });
 $("k-timeline").addEventListener("change", () => { $("k-tl-text").hidden = $("k-timeline").value !== "Lainnya"; });
 
@@ -744,9 +748,9 @@ kvForm.addEventListener("submit", async e => {
   try {
     const image = await shrinkImage($("k-image").files[0]);
     const id = kvCode(); msg.textContent = "Mengirim…";
-    await put("kvApprovals", id, {code:id, requester:fd.get("requester").trim(), team:fd.get("team").trim(), brand:fd.get("brand"),
+    await put("kvApprovals", id, {code:id, requester:fd.get("requester").trim(), teamType:fd.get("teamType"), teamName:(fd.get("teamName") || "").trim(), team: fd.get("teamType") === "brand" ? "Tim Brand" : "Tim lain: " + (fd.get("teamName") || "").trim(), brand:fd.get("brand"),
       objective:fd.get("objective").trim(), audience:fd.get("audience").trim(), placement, timeline, image, status:"pending", createdAt:new Date().toISOString()});
-    kvForm.reset(); $("k-preview").hidden = true; $("k-pl-text").hidden = true; $("k-tl-text").hidden = true;
+    kvForm.reset(); toggleKvTeam(); $("k-preview").hidden = true; $("k-pl-text").hidden = true; $("k-tl-text").hidden = true;
     $("kv-sent-code").textContent = id; $("kv-sent").hidden = false; kvForm.hidden = true; msg.textContent = "Kolom bertanda * wajib diisi.";
     scrollTo({top:0, behavior:"smooth"});
   } catch (err) {
