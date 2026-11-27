@@ -2,8 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Tanpa login: siapa pun yang punya link web bisa membaca dan menulis.
-    match /requests/{id}    { allow read, write: if true; }
-    match /assignments/{id} { allow read, write: if true; }
-    match /settings/{id}    { allow read, write: if true; }
+    match /requests/{id}     { allow read, write: if true; }
+    match /assignments/{id}  { allow read, write: if true; }
+    match /settings/{id}     { allow read, write: if true; }
+    match /kvApprovals/{id}  { allow read, write: if true; }
   }
 }

@@ -150,6 +150,12 @@ dd a{color:var(--accent-text)}
 .gate input,.gate textarea{background:var(--surface)}
 fieldset.plain{border:0;padding:0;margin:0;display:grid;gap:14px;min-width:0;background:none}
 fieldset.plain:disabled{opacity:.45}
+.kvthumb{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--sunken);display:block}
+.kvimg{max-width:100%;max-height:60vh;border-radius:10px;border:1px solid var(--line);justify-self:start;cursor:zoom-in}
+.preview{max-width:260px;max-height:200px;border-radius:8px;border:1px solid var(--line);margin-top:6px}
+.subtabs{display:flex;gap:4px;background:var(--sunken);padding:4px;border-radius:999px;width:max-content;max-width:100%}
+.subtabs a{padding:6px 16px;border-radius:999px;text-decoration:none;color:var(--muted);font-weight:500;font-size:.9rem}
+.subtabs a[aria-current="page"]{background:var(--accent);color:#fff;font-weight:600}
 .confirm{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border-radius:8px;background:var(--danger-bg);color:var(--danger);font-size:.9rem}
 @media (max-width:560px){dl{grid-template-columns:1fr;gap:2px}dd{margin-bottom:10px}.dlg{padding:18px}.brand span{display:none}}
 </style>
@@ -161,6 +167,7 @@ fieldset.plain:disabled{opacity:.45}
     <nav class="tabs" aria-label="Halaman">
       <a href="#request" id="tab-request">Buat request</a>
       <a href="#database" id="tab-database">Database</a>
+      <a href="#kv" id="tab-kv">Approval KV</a>
     </nav>
   </div>
 </header>
@@ -269,6 +276,87 @@ fieldset.plain:disabled{opacity:.45}
       </form>
     </div>
   </section>
+  <section class="view" id="view-kv" hidden>
+    <div class="intro">
+      <h2>Approval KV</h2>
+      <p>Ajukan key visual (KV) untuk di-approve sebelum dipakai. Isi tujuan, target audience, penempatan, dan lama tayang, lalu unggah gambar KV-nya.</p>
+    </div>
+    <nav class="subtabs" aria-label="Approval KV">
+      <a href="#kv" id="sub-form">Ajukan KV</a>
+      <a href="#kv-list" id="sub-list">Daftar approval</a>
+    </nav>
+
+    <div id="kv-formbox" class="view">
+      <div class="notice ok" id="kv-sent" hidden>
+        <strong>Pengajuan terkirim.</strong>
+        <span>Kode pengajuan kamu <span class="mono" id="kv-sent-code"></span>. Status: Menunggu review.</span>
+        <div class="actions" style="margin-top:8px"><a class="btn sm" href="#kv-list" style="text-decoration:none">Lihat daftar approval</a><button class="btn ghost sm" type="button" id="kv-again">Ajukan KV lain</button></div>
+      </div>
+      <form id="kv-form" novalidate>
+        <fieldset>
+          <legend>Requester</legend>
+          <div class="grid">
+            <div class="field"><label for="k-requester">Nama requester <span class="req">*</span></label><input type="text" id="k-requester" name="requester" required autocomplete="name"></div>
+            <div class="field"><label for="k-team">Tim requester <span class="req">*</span></label><input type="text" id="k-team" name="team" required placeholder="mis. Brand RSM, Sales, Trade Marketing"></div>
+            <div class="field"><label for="k-brand">Brand <span class="req">*</span></label>
+              <select id="k-brand" name="brand" required><option value="">Pilih brand</option><option>RS</option><option>RSM</option><option>RSK</option><option>RSP</option><option>PBSN</option><option>NTD</option></select></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>KV</legend>
+          <div class="field"><label for="k-image">Gambar KV <span class="req">*</span></label>
+            <input type="file" id="k-image" accept="image/*" required>
+            <small>JPG / PNG. Otomatis diperkecil supaya ringan. Preview muncul di bawah.</small>
+            <img id="k-preview" class="preview" alt="Preview KV" hidden></div>
+        </fieldset>
+        <fieldset>
+          <legend>Details</legend>
+          <div class="field"><label for="k-objective">Objective: KV ini untuk apa? <span class="req">*</span></label><textarea id="k-objective" name="objective" required placeholder="mis. Collab event digital, V-banner collab"></textarea></div>
+          <div class="field"><label for="k-audience">Target audience <span class="req">*</span></label><input type="text" id="k-audience" name="audience" required placeholder="mis. mahasiswa, white collar"></div>
+          <div class="field"><span style="font-weight:600;font-size:.88rem">Placement KV <span class="req">*</span></span>
+            <div class="pills" id="k-placement">
+              <label><input type="checkbox" name="placement" value="IGF">IG Feed (IGF)</label>
+              <label><input type="checkbox" name="placement" value="IGS">IG Story (IGS)</label>
+              <label><input type="checkbox" name="placement" value="Backdrop">Backdrop</label>
+              <label><input type="checkbox" name="placement" value="V-banner">V-banner</label>
+              <label><input type="checkbox" name="placement" value="X-banner">X-banner</label>
+              <label><input type="checkbox" name="placement" value="Poster / POSM">Poster / POSM</label>
+              <label><input type="checkbox" name="placement" value="Lainnya" id="k-pl-other">Lainnya</label>
+            </div>
+            <input type="text" id="k-pl-text" name="placementOther" placeholder="Placement lainnya, sebutkan" hidden></div>
+          <div class="field"><label for="k-timeline">Timeline terpasang <span class="req">*</span></label>
+            <select id="k-timeline" name="timeline" required>
+              <option value="">Pilih lama terpasang</option>
+              <option>1 hari (saat event berlangsung)</option><option>1 minggu</option><option>2 minggu</option><option>1 bulan</option>
+              <option>Always on (posted di social media)</option><option>Lainnya</option>
+            </select>
+            <input type="text" id="k-tl-text" name="timelineOther" placeholder="Timeline lainnya, sebutkan" hidden></div>
+        </fieldset>
+        <div class="actions">
+          <button class="btn" type="submit" id="k-submit">Ajukan approval</button>
+          <span class="msg" id="k-msg">Kolom bertanda * wajib diisi.</span>
+        </div>
+      </form>
+    </div>
+
+    <div id="kv-listbox" class="view" hidden>
+      <div class="stats">
+        <button class="stat" type="button" data-kf="all" aria-pressed="true"><b id="kc-all">0</b><span>Semua pengajuan</span></button>
+        <button class="stat s-none" type="button" data-kf="pending" aria-pressed="false"><b id="kc-pending">0</b><span>Menunggu review</span></button>
+        <button class="stat s-prog" type="button" data-kf="revision" aria-pressed="false"><b id="kc-revision">0</b><span>Perlu revisi</span></button>
+        <button class="stat s-done" type="button" data-kf="approved" aria-pressed="false"><b id="kc-approved">0</b><span>Disetujui</span></button>
+        <button class="stat s-hold" type="button" data-kf="rejected" aria-pressed="false"><b id="kc-rejected">0</b><span>Ditolak</span></button>
+      </div>
+      <div class="tools"><input type="text" id="kq" placeholder="Cari kode, objective, brand, requester…" aria-label="Cari KV"></div>
+      <div class="tablebox">
+        <table style="min-width:900px">
+          <thead><tr><th>KV</th><th>Kode</th><th>Objective</th><th>Brand</th><th>Placement</th><th>Timeline</th><th>Requester</th><th>Status</th></tr></thead>
+          <tbody id="kv-rows"></tbody>
+        </table>
+        <div class="empty" id="kv-empty"><h3 id="kv-empty-h">Belum ada pengajuan</h3><p id="kv-empty-p">Pengajuan dari tab "Ajukan KV" akan muncul di sini.</p></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <dialog id="dlg" aria-labelledby="d-title">
@@ -329,6 +417,39 @@ fieldset.plain:disabled{opacity:.45}
   </div>
 </dialog>
 
+<dialog id="kv-dlg" aria-labelledby="kd-title">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><span class="mono" id="kd-code" style="color:var(--muted)"></span><h2 id="kd-title"></h2><div id="kd-chips" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>
+      <button class="x" type="button" id="kd-close" aria-label="Tutup">×</button>
+    </div>
+    <img id="kd-img" class="kvimg" alt="Gambar KV" hidden>
+    <dl id="kd-list"></dl>
+    <div class="sup" id="kd-sup">
+      <h3>Review &amp; approval</h3>
+      <div class="field"><label for="kd-approver">Nama approver</label><input type="text" id="kd-approver" placeholder="nama kamu"></div>
+      <div class="field"><span style="font-weight:600;font-size:.88rem">Keputusan</span>
+        <div class="seg" role="radiogroup" aria-label="Keputusan">
+          <label class="none"><input type="radio" name="kd-status" value="pending">Menunggu</label>
+          <label class="done"><input type="radio" name="kd-status" value="approved">Disetujui</label>
+          <label class="prog"><input type="radio" name="kd-status" value="revision">Perlu revisi</label>
+          <label class="hold"><input type="radio" name="kd-status" value="rejected">Ditolak</label>
+        </div></div>
+      <div class="field"><label for="kd-note">Catatan untuk requester</label><textarea id="kd-note" placeholder="wajib diisi kalau perlu revisi atau ditolak"></textarea></div>
+      <div class="actions">
+        <button class="btn" type="button" id="kd-save">Simpan keputusan</button>
+        <button class="btn danger sm" type="button" id="kd-del">Hapus</button>
+        <span class="msg" id="kd-msg"></span>
+      </div>
+      <div class="confirm" id="kd-confirm" hidden>
+        <span>Hapus pengajuan ini permanen?</span>
+        <button class="btn danger sm" type="button" id="kd-del-yes">Ya, hapus</button>
+        <button class="btn ghost sm" type="button" id="kd-del-no">Batal</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -347,7 +468,7 @@ const STATUS = {not_started:["Not Started","none"], in_progress:["In Progress","
 const PRIO = v => ({Urgent:"High", Normal:"Medium", Slow:"Low"}[v] || (["High","Medium","Low"].includes(v) ? v : "Medium"));
 const brandOf = r => r.brand || r.division || "";
 const brandState = (r, a) => (a && a.brandApproval) || (r.needsApproval ? "pending" : "na");   // na | pending | approved | rejected
-const S = {uid:null, admin:true, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
+const S = {kv:[], kvFilter:"all", kvOpen:null, uid:null, admin:true, requests:[], assign:{}, team:[], filter:"all", openId:null, gotReq:false};
 
 const configured = !firebaseConfig.apiKey.startsWith("ISI_");
 let db;
@@ -367,6 +488,7 @@ const saveLocal = d => { try { localStorage.setItem(LKEY, JSON.stringify(d)); } 
 function pullLocal(){
   const d = loadLocal();
   S.requests = Object.entries(d.requests || {}).map(([id,v]) => ({id, ...v})).sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
+  S.kv = Object.entries(d.kvApprovals || {}).map(([id,v]) => ({id, ...v})).sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
   S.assign = d.assignments || {}; S.team = (d.team && d.team.members) || []; S.gotReq = true; render();
 }
 async function put(col, id, data, merge = false){
@@ -382,13 +504,12 @@ async function del(col, id){
 
 /* ---------- routing ---------- */
 function route(){
-  const v = location.hash === "#database" ? "database" : "request";
-  $("view-request").hidden = v !== "request";
-  $("view-database").hidden = v !== "database";
-  $("tab-request").toggleAttribute("aria-current", v === "request");
-  $("tab-database").toggleAttribute("aria-current", v === "database");
-  $("tab-request").setAttribute("aria-current", v === "request" ? "page" : "false");
-  $("tab-database").setAttribute("aria-current", v === "database" ? "page" : "false");
+  const h = location.hash;
+  const v = h === "#database" ? "database" : (h === "#kv" || h === "#kv-list") ? "kv" : "request";
+  for (const n of ["request","database","kv"]) { $("view-"+n).hidden = v !== n; $("tab-"+n).setAttribute("aria-current", v === n ? "page" : "false"); }
+  const list = h === "#kv-list";
+  $("kv-formbox").hidden = list; $("kv-listbox").hidden = !list;
+  $("sub-form").setAttribute("aria-current", list ? "false" : "page"); $("sub-list").setAttribute("aria-current", list ? "page" : "false");
 }
 addEventListener("hashchange", route); route();
 
@@ -494,6 +615,7 @@ function render(){
   $("team").hidden = !S.admin;
   $("team-list").innerHTML = S.team.length ? S.team.map((m,i) => `<span class="member">${esc(m)}<button type="button" data-rm="${i}" aria-label="Hapus ${esc(m)}">×</button></span>`).join("") : '<span class="msg">Belum ada anggota. Tambahkan nama tim agar bisa dipilih sebagai PIC.</span>';
   if (S.openId && $("dlg").open) fillDetail(S.openId, true);
+  renderKV();
 }
 document.querySelectorAll(".stat").forEach(b => b.addEventListener("click", () => { S.filter = b.dataset.f; render(); }));
 ["q","pic-filter","sort"].forEach(id => $(id).addEventListener("input", render));
@@ -580,6 +702,128 @@ async function brandDecide(ok){
 $("b-ok").addEventListener("click", () => brandDecide(true));
 $("b-no").addEventListener("click", () => brandDecide(false));
 
+/* ---------- Approval KV ---------- */
+const KV_STATUS = {pending:["Menunggu review","none"], approved:["Disetujui","done"], revision:["Perlu revisi","prog"], rejected:["Ditolak","hold"]};
+const kvForm = $("kv-form");
+const kvCode = () => "KV-" + code().slice(3);
+
+async function shrinkImage(file, max = 1400){
+  const bmp = await createImageBitmap(file);
+  let k = Math.min(1, max / Math.max(bmp.width, bmp.height)), url = "";
+  for (let i = 0; i < 6; i++) {
+    const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+    for (const q of [.85, .72, .6]) { url = c.toDataURL("image/jpeg", q); if (url.length <= 700000) return url; }
+    k *= .8;
+  }
+  throw new Error("image-too-big");
+}
+$("k-image").addEventListener("change", () => {
+  const f = $("k-image").files[0], pv = $("k-preview");
+  if (!f) { pv.hidden = true; return; }
+  pv.src = URL.createObjectURL(f); pv.hidden = false;
+});
+$("k-pl-other").addEventListener("change", () => { $("k-pl-text").hidden = !$("k-pl-other").checked; });
+$("k-timeline").addEventListener("change", () => { $("k-tl-text").hidden = $("k-timeline").value !== "Lainnya"; });
+
+kvForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = $("k-msg"); msg.className = "msg";
+  const fail = (t, el) => { msg.className = "msg err"; msg.textContent = t; if (el) el.focus(); };
+  const missing = [...kvForm.querySelectorAll("[required]")].filter(el => el.type === "file" ? !el.files.length : !el.value.trim());
+  kvForm.querySelectorAll("[required]").forEach(el => el.setAttribute("aria-invalid", missing.includes(el) ? "true" : "false"));
+  if (missing.length) return fail("Lengkapi dulu: " + missing.map(el => kvForm.querySelector(`label[for="${el.id}"]`).childNodes[0].textContent.trim().replace(/:.*$/, "")).join(", ") + ".", missing[0]);
+  const fd = new FormData(kvForm);
+  let placement = fd.getAll("placement");
+  if (!placement.length) return fail("Pilih minimal satu Placement KV.", kvForm.querySelector('[name="placement"]'));
+  const plOther = $("k-pl-text").value.trim();
+  if (placement.includes("Lainnya")) { if (!plOther) return fail("Sebutkan placement lainnya.", $("k-pl-text")); placement = placement.map(x => x === "Lainnya" ? "Lainnya: " + plOther : x); }
+  let timeline = $("k-timeline").value;
+  if (timeline === "Lainnya") { const t = $("k-tl-text").value.trim(); if (!t) return fail("Sebutkan timeline lainnya.", $("k-tl-text")); timeline = t; }
+  $("k-submit").disabled = true; msg.textContent = "Memproses gambar…";
+  try {
+    const image = await shrinkImage($("k-image").files[0]);
+    const id = kvCode(); msg.textContent = "Mengirim…";
+    await put("kvApprovals", id, {code:id, requester:fd.get("requester").trim(), team:fd.get("team").trim(), brand:fd.get("brand"),
+      objective:fd.get("objective").trim(), audience:fd.get("audience").trim(), placement, timeline, image, status:"pending", createdAt:new Date().toISOString()});
+    kvForm.reset(); $("k-preview").hidden = true; $("k-pl-text").hidden = true; $("k-tl-text").hidden = true;
+    $("kv-sent-code").textContent = id; $("kv-sent").hidden = false; kvForm.hidden = true; msg.textContent = "Kolom bertanda * wajib diisi.";
+    scrollTo({top:0, behavior:"smooth"});
+  } catch (err) {
+    msg.className = "msg err";
+    msg.textContent = err.message === "image-too-big" ? "Gambar terlalu besar, coba file yang lebih kecil." : err.code === "permission-denied" ? "Ditolak database: tambahkan aturan kvApprovals di Firestore Rules (lihat firestore.rules)." : "Gagal mengirim (" + (err.code || err.message || "error") + "). Coba lagi.";
+  } finally { $("k-submit").disabled = false; }
+});
+$("kv-again").addEventListener("click", () => { $("kv-sent").hidden = true; kvForm.hidden = false; $("k-requester").focus(); });
+
+function renderKV(){
+  const rs = S.kv, n = {all:rs.length, pending:0, approved:0, revision:0, rejected:0};
+  rs.forEach(r => { n[r.status || "pending"]++; });
+  for (const k of Object.keys(n)) $("kc-" + k).textContent = n[k];
+  document.querySelectorAll("[data-kf]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.kf === S.kvFilter)));
+  const q = $("kq").value.trim().toLowerCase();
+  const list = rs.filter(r => (S.kvFilter === "all" || (r.status || "pending") === S.kvFilter) &&
+    (!q || [r.code, r.objective, r.brand, r.requester, r.team, r.audience, (r.placement || []).join(" ")].join(" ").toLowerCase().includes(q)));
+  $("kv-rows").innerHTML = list.map(r => {
+    const st = KV_STATUS[r.status || "pending"];
+    return `<tr data-id="${esc(r.id)}" tabindex="0">
+      <td>${r.image ? `<img class="kvthumb" src="${esc(r.image)}" alt="">` : ""}</td>
+      <td class="mono">${esc(r.code || r.id)}</td>
+      <td><div class="t">${esc((r.objective || "").slice(0, 80))}${(r.objective || "").length > 80 ? "…" : ""}</div><div class="s">${esc(r.audience)}</div></td>
+      <td>${esc(r.brand)}</td>
+      <td>${esc((r.placement || []).join(", "))}</td>
+      <td>${esc(r.timeline)}</td>
+      <td><div>${esc(r.requester)}</div><div class="s">${esc(r.team)}</div></td>
+      <td><span class="chip ${st[1]}">${st[0]}</span>${r.approver ? `<div class="s">${esc(r.approver)}</div>` : ""}</td></tr>`;
+  }).join("");
+  $("kv-empty").hidden = list.length > 0;
+  $("kv-empty-h").textContent = rs.length ? "Tidak ada yang cocok" : "Belum ada pengajuan";
+  $("kv-empty-p").textContent = rs.length ? "Ubah filter atau kata kunci pencarian." : 'Pengajuan dari tab "Ajukan KV" akan muncul di sini.';
+  if (S.kvOpen && $("kv-dlg").open) fillKV(S.kvOpen, true);
+}
+document.querySelectorAll("[data-kf]").forEach(b => b.addEventListener("click", () => { S.kvFilter = b.dataset.kf; renderKV(); }));
+$("kq").addEventListener("input", renderKV);
+$("kv-rows").addEventListener("click", e => { const tr = e.target.closest("tr[data-id]"); if (tr) openKV(tr.dataset.id); });
+$("kv-rows").addEventListener("keydown", e => { if (e.key === "Enter") { const tr = e.target.closest("tr[data-id]"); if (tr) openKV(tr.dataset.id); } });
+
+function fillKV(id, live){
+  const r = S.kv.find(x => x.id === id); if (!r) { $("kv-dlg").close(); return; }
+  const st = KV_STATUS[r.status || "pending"];
+  $("kd-code").textContent = r.code || r.id; $("kd-title").textContent = r.brand + " · " + (r.objective || "").slice(0, 60);
+  $("kd-chips").innerHTML = `<span class="chip ${st[1]}">${st[0]}</span>`;
+  $("kd-img").hidden = !r.image; if (r.image) $("kd-img").src = r.image;
+  const rows = [["Objective", r.objective], ["Target audience", r.audience], ["Placement KV", (r.placement || []).join(", ")], ["Timeline terpasang", r.timeline],
+    ["Requester", r.requester], ["Tim requester", r.team], ["Brand", r.brand], ["Dikirim", fmtTime(r.createdAt)],
+    ["Approver", r.approver], ["Catatan approver", r.note], ["Diputuskan", r.decidedAt && fmtTime(r.decidedAt)]].filter(([,v]) => v);
+  $("kd-list").innerHTML = rows.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+  if (!live) {
+    $("kd-approver").value = r.approver || ""; $("kd-note").value = r.note || ""; $("kd-msg").className = "msg"; $("kd-msg").textContent = ""; $("kd-confirm").hidden = true;
+    document.querySelector(`input[name="kd-status"][value="${r.status || "pending"}"]`).checked = true;
+  }
+}
+function openKV(id){ S.kvOpen = id; fillKV(id, false); $("kv-dlg").showModal(); }
+$("kd-close").addEventListener("click", () => $("kv-dlg").close());
+$("kv-dlg").addEventListener("click", e => { if (e.target === $("kv-dlg")) $("kv-dlg").close(); });
+$("kv-dlg").addEventListener("close", () => { S.kvOpen = null; });
+$("kd-img").addEventListener("click", () => { const r = S.kv.find(x => x.id === S.kvOpen); if (r && r.image) { const w = open(); if (w) { w.document.title = r.code || "KV"; w.document.body.style.margin = "0"; w.document.body.innerHTML = `<img src="${r.image}" style="max-width:100%">`; } } });
+$("kd-save").addEventListener("click", async () => {
+  const id = S.kvOpen; if (!id) return;
+  const status = document.querySelector('input[name="kd-status"]:checked').value, approver = $("kd-approver").value.trim(), note = $("kd-note").value.trim(), msg = $("kd-msg");
+  msg.className = "msg err";
+  if (status !== "pending" && !approver) { msg.textContent = "Isi nama approver."; return; }
+  if ((status === "revision" || status === "rejected") && !note) { msg.textContent = "Isi catatan untuk requester."; return; }
+  $("kd-save").disabled = true; msg.className = "msg"; msg.textContent = "Menyimpan…";
+  try { await put("kvApprovals", id, {status, approver, note, decidedAt: status === "pending" ? null : new Date().toISOString()}, true); msg.textContent = "Tersimpan."; }
+  catch (e) { msg.className = "msg err"; msg.textContent = e.code === "permission-denied" ? "Ditolak database (cek Firestore Rules)." : "Gagal menyimpan. Coba lagi."; }
+  finally { $("kd-save").disabled = false; }
+});
+$("kd-del").addEventListener("click", () => { $("kd-confirm").hidden = false; });
+$("kd-del-no").addEventListener("click", () => { $("kd-confirm").hidden = true; });
+$("kd-del-yes").addEventListener("click", async () => {
+  const id = S.kvOpen; if (!id) return;
+  try { await del("kvApprovals", id); $("kv-dlg").close(); } catch { $("kd-msg").className = "msg err"; $("kd-msg").textContent = "Gagal menghapus."; }
+});
+
 /* ---------- team ---------- */
 async function saveTeam(list){ try { await put("settings", "team", {members:list}); } catch { $("team-name").placeholder = "Gagal menyimpan daftar tim."; } }
 $("team-form").addEventListener("submit", e => { e.preventDefault(); const v = $("team-name").value.trim(); if (!v || S.team.includes(v)) return; $("team-name").value = ""; saveTeam([...S.team, v]); });
@@ -595,6 +839,7 @@ if (!configured) {
   const fail = e => showConn("Koneksi ke database gagal (" + e.code + "). Cek firestore.rules dan konfigurasi.");
   onSnapshot(query(collection(db,"requests"), orderBy("createdAt","desc")), s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); S.gotReq = true; render(); }, fail);
   onSnapshot(collection(db,"assignments"), s => { const m = {}; s.docs.forEach(d => m[d.id] = d.data()); S.assign = m; render(); }, fail);
+  onSnapshot(query(collection(db,"kvApprovals"), orderBy("createdAt","desc")), s => { S.kv = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, fail);
   onSnapshot(doc(db,"settings","team"), s => { S.team = (s.exists() && Array.isArray(s.data().members)) ? s.data().members.slice() : []; render(); }, fail);
 }
 </script>
